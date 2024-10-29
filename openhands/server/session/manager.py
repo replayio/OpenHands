@@ -53,6 +53,9 @@ class SessionManager:
         await c.connect()
         return c
 
+    async def detach_from_conversation(self, conversation: Conversation):
+        await conversation.disconnect()
+
     async def send(self, sid: str, data: dict[str, object]) -> bool:
         """Sends data to the client."""
         session = self.get_session(sid)
@@ -85,7 +88,7 @@ class SessionManager:
                 to_del_session: Session | None = self._sessions.pop(sid, None)
                 if to_del_session is not None:
                     await to_del_session.close()
-                    logger.info(
+                    logger.debug(
                         f'Session {sid} and related resource have been removed due to inactivity.'
                     )
 
