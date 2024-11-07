@@ -13,7 +13,10 @@ export function handleObservationMessage(message: ObservationMessage) {
       if (message.extras.hidden) break;
       store.dispatch(appendOutput(message.content));
       break;
-    case ObservationType.RUN_IPYTHON:
+    case ObservationType.RUN_REPLAY:
+        store.dispatch(appendOutput(message.content));
+        break;
+      case ObservationType.RUN_IPYTHON:
       // FIXME: render this as markdown
       store.dispatch(appendJupyterOutput(message.content));
       break;

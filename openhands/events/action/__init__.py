@@ -8,6 +8,7 @@ from openhands.events.action.agent import (
 )
 from openhands.events.action.browse import BrowseInteractiveAction, BrowseURLAction
 from openhands.events.action.commands import CmdRunAction, IPythonRunCellAction
+from openhands.events.action.replay import ReplayCmdRunAction
 from openhands.events.action.empty import NullAction
 from openhands.events.action.files import (
     FileEditAction,
@@ -36,4 +37,5 @@ __all__ = [
     'IPythonRunCellAction',
     'MessageAction',
     'ActionConfirmationStatus',
+    'ReplayRunCmdAction',
 ]

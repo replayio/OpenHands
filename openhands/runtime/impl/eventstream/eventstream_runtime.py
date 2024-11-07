@@ -18,6 +18,7 @@ from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
+    ReplayCmdRunAction,
     FileEditAction,
     FileReadAction,
     FileWriteAction,
@@ -515,6 +516,9 @@ class EventStreamRuntime(Runtime):
             return obs
 
     def run(self, action: CmdRunAction) -> Observation:
+        return self.run_action(action)
+
+    def run_replay(self, action: ReplayCmdRunAction) -> Observation:
         return self.run_action(action)
 
     def run_ipython(self, action: IPythonRunCellAction) -> Observation:

@@ -14,6 +14,7 @@ from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
+    ReplayCmdRunAction,
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
@@ -193,6 +194,10 @@ class Runtime(FileEditRuntimeMixin):
 
     @abstractmethod
     def run_ipython(self, action: IPythonRunCellAction) -> Observation:
+        pass
+
+    @abstractmethod
+    def run_replay(self, action: ReplayCmdRunAction) -> Observation:
         pass
 
     @abstractmethod

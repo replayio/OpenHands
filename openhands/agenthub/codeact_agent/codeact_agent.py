@@ -17,6 +17,7 @@ from openhands.events.action import (
     AgentDelegateAction,
     AgentFinishAction,
     CmdRunAction,
+    ReplayCmdRunAction,
     FileEditAction,
     IPythonRunCellAction,
     MessageAction,
@@ -24,6 +25,7 @@ from openhands.events.action import (
 from openhands.events.observation import (
     AgentDelegateObservation,
     CmdOutputObservation,
+    ReplayCmdOutputObservation,
     FileEditObservation,
     IPythonRunCellObservation,
     UserRejectObservation,
@@ -108,6 +110,7 @@ class CodeActAgent(Agent):
                 codeact_enable_browsing_delegate=self.config.codeact_enable_browsing_delegate,
                 codeact_enable_jupyter=self.config.codeact_enable_jupyter,
                 codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
+                codeact_enable_replay=self.config.codeact_enable_replay,
             )
             logger.info(
                 f'TOOLS loaded for CodeActAgent: {json.dumps(self.tools, indent=2)}'
@@ -167,6 +170,7 @@ class CodeActAgent(Agent):
             (
                 AgentDelegateAction,
                 CmdRunAction,
+                ReplayCmdRunAction,
                 IPythonRunCellAction,
                 FileEditAction,
             ),
@@ -251,6 +255,12 @@ class CodeActAgent(Agent):
             )
             text += f'\n[Command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
+        elif isinstance(obs, ReplayCmdOutputObservation):
+            text = obs_prefix + truncate_content(
+                obs.content + obs.interpreter_details, max_message_chars
+            )
+            text += f'\n[Replay command finished with exit code {obs.exit_code}]'
+            message = Message(role='user', content=[TextContent(text=text)])
         elif isinstance(obs, IPythonRunCellObservation):
             text = obs_prefix + obs.content
             # replace base64 images with a placeholder
@@ -314,6 +324,7 @@ class CodeActAgent(Agent):
 
         Returns:
         - CmdRunAction(command) - bash command to run
+        - ReplayCmdRunAction(command) - replay command to run
         - IPythonRunCellAction(code) - IPython code to run
         - AgentDelegateAction(agent, inputs) - delegate action for (sub)task
         - MessageAction(content) - Message action to run (e.g. ask for clarification)
@@ -339,6 +350,7 @@ class CodeActAgent(Agent):
             params['stop'] = [
                 '</execute_ipython>',
                 '</execute_bash>',
+                '</execute_replay>',
                 '</execute_browse>',
                 '</file_edit>',
             ]
