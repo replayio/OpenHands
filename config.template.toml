@@ -231,6 +231,12 @@ llm_config = 'gpt3'
 # BrowserGym environment to use for evaluation
 #browsergym_eval_env = ""
 
+#################################### Replay ###################################
+# Configuration for replay integration
+##############################################################################
+[replay]
+#api_key = ''
+
 #################################### Security ###################################
 # Configuration for security features
 ##############################################################################

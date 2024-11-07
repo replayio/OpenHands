@@ -90,6 +90,8 @@ class Runtime(FileEditRuntimeMixin):
         self.add_env_vars(self.initial_env_vars)
         if self.config.sandbox.runtime_startup_env_vars:
             self.add_env_vars(self.config.sandbox.runtime_startup_env_vars)
+        if self.config.replay.api_key:
+            self.add_env_vars({'REPLAY_API_KEY': self.config.replay.api_key})
 
     def close(self) -> None:
         pass
