@@ -10,9 +10,11 @@ class ReplayConfig:
 
     Attributes:
         api_key: The API key to use for the replay API.
+        dir: The parent directory of both devtools and replayapi git repositories.
     """
 
     api_key: str | None = None
+    dir: str | None = None
 
     def defaults_to_dict(self) -> dict:
         """Serialize fields to a dict for the frontend, including type hints, defaults, and whether it's optional."""
@@ -20,7 +22,7 @@ class ReplayConfig:
         for f in fields(self):
             result[f.name] = get_field_info(f)
         return result
-    
+
     def to_safe_dict(self):
         """Return a dict with the sensitive fields replaced with ******."""
         ret = self.__dict__.copy()
@@ -30,7 +32,7 @@ class ReplayConfig:
             elif isinstance(v, ReplayConfig):
                 ret[k] = v.to_safe_dict()
         return ret
-    
+
     def __str__(self):
         attr_str = []
         for f in fields(self):

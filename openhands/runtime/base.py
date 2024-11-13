@@ -93,6 +93,11 @@ class Runtime(FileEditRuntimeMixin):
         if self.config.replay.api_key:
             self.add_env_vars({'REPLAY_API_KEY': self.config.replay.api_key})
 
+        if self.config.replay.api_key:
+            self.add_env_vars({'REPLAY_API_KEY': self.config.replay.api_key})
+        if self.config.replay.dir:
+            self.add_env_vars({'REPLAY_DIR': self.config.replay.dir})
+
     def close(self) -> None:
         pass
 

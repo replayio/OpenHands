@@ -174,7 +174,7 @@ class ActionExecutor:
         return self.bash_session.run(action)
 
     async def run_replay(self, action: ReplayCmdRunAction) -> ReplayCmdOutputObservation:
-        command = f'/openhands/replayapi/scripts/run.sh {action.command}'
+        command = f'/replay/replayapi/scripts/run.sh {action.command}'
         if action.recording_id != '':
             command = command + f' -r {action.recording_id}'
         if action.session_id != '':
