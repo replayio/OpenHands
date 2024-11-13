@@ -30,20 +30,20 @@ from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
-    ReplayCmdRunAction,
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
+    ReplayCmdRunAction,
 )
 from openhands.events.observation import (
     CmdOutputObservation,
-    ReplayCmdOutputObservation,
     ErrorObservation,
     FatalErrorObservation,
     FileReadObservation,
     FileWriteObservation,
     IPythonRunCellObservation,
     Observation,
+    ReplayCmdOutputObservation,
 )
 from openhands.events.serialization import event_from_dict, event_to_dict
 from openhands.runtime.browser import browse
@@ -173,7 +173,9 @@ class ActionExecutor:
     ) -> CmdOutputObservation | FatalErrorObservation:
         return self.bash_session.run(action)
 
-    async def run_replay(self, action: ReplayCmdRunAction) -> ReplayCmdOutputObservation:
+    async def run_replay(
+        self, action: ReplayCmdRunAction
+    ) -> ReplayCmdOutputObservation | FatalErrorObservation:
         command = f'/replay/replayapi/scripts/run.sh {action.command}'
         if action.recording_id != '':
             command = command + f' -r {action.recording_id}'
@@ -191,6 +193,10 @@ class ActionExecutor:
         )
         cmd_action.timeout = 600
         obs = self.bash_session.run(cmd_action)
+
+        if isinstance(obs, FatalErrorObservation):
+            return obs
+
         # we might not actually need a separate observation type for replay...
         return ReplayCmdOutputObservation(
             command_id=obs.command_id,
