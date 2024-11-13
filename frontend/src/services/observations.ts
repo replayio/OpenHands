@@ -14,9 +14,9 @@ export function handleObservationMessage(message: ObservationMessage) {
       store.dispatch(appendOutput(message.content));
       break;
     case ObservationType.RUN_REPLAY:
-        store.dispatch(appendOutput(message.content));
-        break;
-      case ObservationType.RUN_IPYTHON:
+      store.dispatch(appendOutput(message.content));
+      break;
+    case ObservationType.RUN_IPYTHON:
       // FIXME: render this as markdown
       store.dispatch(appendJupyterOutput(message.content));
       break;

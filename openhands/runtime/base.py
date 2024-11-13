@@ -14,10 +14,10 @@ from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
-    ReplayCmdRunAction,
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
+    ReplayCmdRunAction,
 )
 from openhands.events.event import Event
 from openhands.events.observation import (
