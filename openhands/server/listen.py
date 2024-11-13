@@ -283,6 +283,10 @@ async def websocket_endpoint(websocket: WebSocket):
         ```json
         {"action": "run", "args": {"command": "ls -l", "thought": "", "confirmation_state": "confirmed"}}
         ```
+    - Run a replay command:
+        ```json
+        {"action": "run_replay", "args": {"command": "fetch-comments", "thought": "", "confirmation_state": "confirmed"}}
+        ```
     - Run an IPython command:
         ```json
         {"action": "run_ipython", "args": {"command": "print('Hello, IPython!')"}}
