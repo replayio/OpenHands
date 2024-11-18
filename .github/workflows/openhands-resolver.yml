@@ -141,14 +141,14 @@ jobs:
               issue_number: ${{ env.ISSUE_NUMBER }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `[OpenHands](https://github.com/All-Hands-AI/OpenHands) started fixing the ${issueType}! You can monitor the progress [here](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`
+              body: `[OpenHands](https://github.com/replayio-public/OpenHands) started fixing the ${issueType}! You can monitor the progress [here](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`
             });
 
       - name: Install OpenHands
         run: |
           if [ "${{ github.event.label.name }}" == "fix-me-experimental" ]; then
             python -m pip install --upgrade pip
-            pip install git+https://github.com/all-hands-ai/openhands.git
+            pip install git+https://github.com/replayio-public/openhands.git
           else
             python -m pip install --upgrade -r requirements.txt
           fi
