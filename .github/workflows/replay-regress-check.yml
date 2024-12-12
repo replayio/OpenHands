@@ -33,3 +33,7 @@ jobs:
           workflow_file_name: regress-check.yml
           propagate_failure: true
           trigger_workflow: true
+          client_payload: |
+            {
+              "openhands_sha": "${{ github.sha }}"
+            }
