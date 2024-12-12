@@ -1,14 +1,13 @@
 # Workflow that runs regression tests against our solved test bugs
 name: Run Replay Regression Tests
 
-# The jobs in this workflow are required, so they must run at all times
-# * Always run on "main"
-# * Always run on PRs
+# Wait until the Docker workflow has completed, since our regression tests depend
+# on the containers being published.
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_run:
+    workflows: [Docker]
+    types: [completed]
+
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
 concurrency:
@@ -17,6 +16,7 @@ concurrency:
 
 jobs:
   check-for-regressions:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # don't stop the job if a matrix entry fails
