@@ -23,6 +23,7 @@ jobs:
         uses: actions/github-script@v7
         if: always() # don't let other checks keep this from running
         with:
+          github-token: ${{ secrets.WORKFLOW_DISPATCH_TOKEN }}
           script: |
             github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
