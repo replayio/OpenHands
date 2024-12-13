@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Type
 if TYPE_CHECKING:
     from openhands.controller.state.state import State
     from openhands.core.config import AgentConfig
+    from openhands.core.schema.replay import ReplayDebuggingPhase
     from openhands.events.action import Action
 from openhands.core.exceptions import (
     AgentAlreadyRegisteredError,
@@ -60,6 +61,14 @@ class Agent(ABC):
 
         if self.llm:
             self.llm.reset()
+
+    # the "noqa" below is so we can add an empty but not abstract method. otherwise we'd need an empty
+    # implmentation in every subclass other than CodeActAgent (which does override it.)
+    def replay_phase_changed(self, phase: ReplayDebuggingPhase) -> None:  # noqa: B027
+        """Called when the phase of the replay debugging process changes. This method
+        can be used to update the agent's behavior based on the phase.
+        """
+        pass
 
     @property
     def name(self):

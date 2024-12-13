@@ -10,6 +10,7 @@ from openhands.controller.state.state import State
 from openhands.core.config import AgentConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import ImageContent, Message, TextContent
+from openhands.core.schema.replay import ReplayDebuggingPhase
 from openhands.events.action import (
     Action,
     AgentDelegateAction,
@@ -93,15 +94,10 @@ class CodeActAgent(Agent):
             )
             self.mock_function_calling = True
 
-        # Function calling mode
-        self.tools = codeact_function_calling.get_tools(
-            codeact_enable_browsing=self.config.codeact_enable_browsing,
-            codeact_enable_jupyter=self.config.codeact_enable_jupyter,
-            codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
-        )
-        logger.debug(
-            f'TOOLS loaded for CodeActAgent: {json.dumps(self.tools, indent=2)}'
-        )
+        # We're in normal mode by default (even if replay is not enabled).
+        # This will initialize the set of tools the agent has access to.
+        self.replay_phase_changed(ReplayDebuggingPhase.Normal)
+
         self.prompt_manager = PromptManager(
             microagent_dir=os.path.join(os.path.dirname(__file__), 'micro')
             if self.config.use_microagents
@@ -327,6 +323,23 @@ class CodeActAgent(Agent):
     def reset(self) -> None:
         """Resets the CodeAct Agent."""
         super().reset()
+
+    def replay_phase_changed(self, phase: ReplayDebuggingPhase) -> None:
+        """Called whenenever the phase of the replay debugging process changes.
+
+        We currently use this to give the agent access to different tools for the
+        different phases.
+        """
+        self.tools = codeact_function_calling.get_tools(
+            codeact_enable_browsing=self.config.codeact_enable_browsing,
+            codeact_enable_jupyter=self.config.codeact_enable_jupyter,
+            codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
+            codeact_enable_replay=self.config.codeact_enable_replay,
+            codeact_replay_phase=phase,
+        )
+        logger.debug(
+            f'TOOLS loaded for CodeActAgent (replay phase {phase}): {json.dumps(self.tools, indent=2)}'
+        )
 
     def step(self, state: State) -> Action:
         """Performs one step using the CodeAct Agent.
