@@ -117,15 +117,22 @@ def handle_replay_enhance_observation(
             annotated_repo_path = result.get('annotatedRepo', '')
             comment_text = result.get('commentText', '')
             react_component_name = result.get('reactComponentName', '')
+            console_error = result.get('consoleError', '')
             # start_location = result.get('startLocation', '')
             start_name = result.get('startName', '')
 
             # TODO: Move this to a prompt template file.
-            if react_component_name:
-                enhancement = f'There is a change needed to the {react_component_name} component.\n'
-            else:
-                enhancement = f'There is a change needed in {annotated_repo_path}:\n'
-            enhancement += f'{comment_text}\n\n'
+            if comment_text:
+                if react_component_name:
+                    enhancement = f'There is a change needed to the {react_component_name} component.\n'
+                else:
+                    enhancement = (
+                        f'There is a change needed in {annotated_repo_path}:\n'
+                    )
+                enhancement += f'{comment_text}\n\n'
+            elif console_error:
+                enhancement = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
+                enhancement += f'{console_error}\n\n'
 
             enhancement += '<IMPORTANT>\n'
             enhancement += 'Information about a reproduction of the problem is available in source comments.\n'
