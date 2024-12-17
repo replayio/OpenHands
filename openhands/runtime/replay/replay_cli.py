@@ -1,5 +1,4 @@
 import json
-import re
 import tempfile
 from typing import Any
 
@@ -8,19 +7,6 @@ from openhands.events.action.replay import ReplayCmdRunAction
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.replay import ReplayCmdOutputObservation
 from openhands.runtime.utils.bash import BashSession
-
-MARKER_START = 'MARKER-gJNVWbR2W1FRxa5zkvVZtXcrep2DFHjUUNjQJErE-START'
-MARKER_END = 'MARKER-gJNVWbR2W1FRxa5zkvVZtXcrep2DFHjUUNjQJErE-END'
-
-
-# NOTE: We use Markers to avoid noise corrupting the JSON output.
-def get_marked_output_json_string(output: str) -> str:
-    """This should return a JSON-parseable string."""
-    parts = re.split(f'{MARKER_START}|{MARKER_END}', output)
-    if len(parts) < 3:
-        raise ValueError(f'replayapi output does not contain markers: {output}')
-    # Return only what is between the markers.
-    return parts[1]
 
 
 class ReplayCli:
@@ -74,7 +60,9 @@ class ReplayCli:
         if isinstance(obs, ErrorObservation):
             return obs
 
-        output = get_marked_output_json_string(obs.content)
+        # Read output from output_path.
+        with open(output_path, 'r') as output_file:
+            output = json.load(output_file)
 
         # we might not actually need a separate observation type for replay...
         return ReplayCmdOutputObservation(
