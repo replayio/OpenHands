@@ -19,7 +19,6 @@ from openhands.events.action import (
     FileEditAction,
     IPythonRunCellAction,
     MessageAction,
-    ReplayCmdRunAction,
 )
 from openhands.events.observation import (
     AgentDelegateObservation,
@@ -199,16 +198,16 @@ class CodeActAgent(Agent):
                     content=content,
                 )
             ]
-        elif isinstance(action, ReplayCmdRunAction) and action.source == 'user':
-            content = [
-                TextContent(text=f'User executed replay command:\n{action.command}')
-            ]
-            return [
-                Message(
-                    role='user',
-                    content=content,
-                )
-            ]
+        # elif isinstance(action, ReplayCmdRunAction) and action.source == 'user':
+        #     content = [
+        #         TextContent(text=f'User executed replay command:\n{action.message}')
+        #     ]
+        #     return [
+        #         Message(
+        #             role='user',
+        #             content=content,
+        #         )
+        #     ]
         return []
 
     def get_observation_message(

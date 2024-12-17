@@ -27,20 +27,22 @@ def scan_recording_id(issue: str) -> str | None:
 def command_annotate_execution_points(
     thought: str, is_workspace_repo: bool
 ) -> ReplayCmdRunAction:
-    # NOTE: For the resolver, the workdir path is the repo path.
-    #       In that case, we should not append the repo name to the path.
-    is_repo_flag = ' -i' if is_workspace_repo else ''
-    # If the workspace is the repo, it should already have been hard reset.
-    force_flag = ' -f' if not is_workspace_repo else ''
-    command = f'"annotate-execution-points" -w "$(pwd)"{is_repo_flag}{force_flag}'
+    command_input = dict()
+    if is_workspace_repo:
+        # NOTE: In the resolver workflow, the workdir path is equal to the repo path:
+        #    1. We should not append the repo name to the path.
+        #    2. The resolver also already hard-reset the repo, so forceDelete is not necessary.
+        command_input['isWorkspaceRepoPath'] = True
+    else:
+        command_input['forceDelete'] = True
+
     action = ReplayCmdRunAction(
+        command_name='initial-analysis',
+        command_args=command_input,
+        in_workspace_dir=True,
         thought=thought,
-        command=command,
-        # NOTE: The command will be followed by a file containing the thought.
-        file_arguments=[thought],
         keep_prompt=False,
         # hidden=True, # The hidden implementation causes problems, so we added replay stuff to `filter_out` instead.
-        in_workspace_dir=True,
     )
     return action
 

@@ -331,7 +331,7 @@ class AgentController:
                 # TODO: Add dedicated tools for managing the analysis state machine.
 
                 # Tell the agent to stop analyzing and start editing:
-                self.state.replay_phase = ReplayDebuggingPhase.Edit
+                self.state.replay_phase = ReplayDebuggingPhase.Normal
                 self.event_stream.add_event(
                     MessageAction(content='Implement the changes.'),
                     EventSource.USER,
