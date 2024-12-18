@@ -148,23 +148,30 @@ jobs:
         run: pipx install poetry
       - name: Install Python dependencies using Poetry
         run: make install-python-dependencies
-      - name: Checkout replayapi
+      - name: Checkout replayapi & devtools
         run: |
-          mkdir replay && git -C replay clone https://github.com/replayio-public/replayapi.git && cd replay/replayapi && git checkout 59551569f5e3277991175de0a47ea5ea0e69ce95
-      - name: Set up NodeJS for replayapi
+          mkdir -p replay
+          git -C replay clone --depth=1 https://github.com/replayio-public/replayapi.git
+          git -C replay clone --depth=1 https://github.com/replayio/devtools.git
+          REPLAY_DIR="$(cd replay && pwd)"
+          echo "REPLAY_DIR=$REPLAY_DIR" >> $GITHUB_ENV
+      - name: Set up NodeJS for replay
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-      - name: Cache replayapi yarn dependencies
+      - name: Cache replay yarn dependencies
         uses: actions/cache@v4
         with:
           path: |
             ./replay/replayapi/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('replay/replayapi/yarn.lock') }}
+            ./replay/devtools/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('replay/*/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-      - name: Install npm dependencies using yarn
-        run: ./replay/replayapi/scripts/install-deps.sh
+      - name: Install replay devtools yarn dependencies
+        run: cd replay/devtools && yarn
+      - name: Install replayapi yarn dependencies
+        run: cd replay/replayapi && yarn && yarn yalc-all
       - name: Create source distribution and Dockerfile
         run: poetry run python3 openhands/runtime/utils/runtime_build.py --base_image ${{ matrix.base_image.image }} --build_folder containers/runtime --force_rebuild
       - name: Build and push runtime image ${{ matrix.base_image.image }}
