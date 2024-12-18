@@ -149,10 +149,8 @@ jobs:
       - name: Install Python dependencies using Poetry
         run: make install-python-dependencies
       - name: Checkout replayapi
-        uses: actions/checkout@v4
-        with:
-          path: 'replayapi'
-          ref: '59551569f5e3277991175de0a47ea5ea0e69ce95'
+        run: |
+          mkdir replay && git clone -C replay https://github.com/replayio-public/replayapi.git && cd replay/replayapi && git checkout 59551569f5e3277991175de0a47ea5ea0e69ce95
       - name: Set up NodeJS for replayapi
         uses: actions/setup-node@v4
         with:
@@ -167,7 +165,7 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-yarn-
       - name: Install npm dependencies using yarn
-        run: ./replayapi/scripts/install-deps.sh
+        run: ./replay/replayapi/scripts/install-deps.sh
       - name: Create source distribution and Dockerfile
         run: poetry run python3 openhands/runtime/utils/runtime_build.py --base_image ${{ matrix.base_image.image }} --build_folder containers/runtime --force_rebuild
       - name: Build and push runtime image ${{ matrix.base_image.image }}
