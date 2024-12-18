@@ -169,9 +169,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
       - name: Install replay devtools yarn dependencies
-        run: cd replay/devtools && yarn
+        run: |
+          cd replay/devtools
+          yarn
       - name: Install replayapi yarn dependencies
-        run: cd replay/replayapi && yarn && yarn yalc-all
+        run: |
+          cd replay/replayapi
+          export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+          corepack enable
+          yarn
+          yarn yalc-all
       - name: Create source distribution and Dockerfile
         run: poetry run python3 openhands/runtime/utils/runtime_build.py --base_image ${{ matrix.base_image.image }} --build_folder containers/runtime --force_rebuild
       - name: Build and push runtime image ${{ matrix.base_image.image }}
