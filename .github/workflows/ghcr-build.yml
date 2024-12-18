@@ -165,9 +165,9 @@ jobs:
           path: |
             ./replay/replayapi/node_modules
             ./replay/devtools/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('replay/*/yarn.lock') }}
+          key: ${{ runner.os }}-replay-yarn-${{ hashFiles('replay/*/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-replay-yarn-
       - name: Install replay devtools yarn dependencies
         run: |
           cd $REPLAY_DIR/devtools
