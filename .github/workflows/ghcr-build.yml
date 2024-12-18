@@ -155,15 +155,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
-          cache: 'yarn'
-      # - name: Cache replayapi yarn dependencies
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ./replayapi/node_modules
-      #     key: ${{ runner.os }}-yarn-${{ hashFiles('replayapi/yarn.lock') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-yarn-
+      - name: Cache replayapi yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./replay/replayapi/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('replay/replayapi/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
       - name: Install npm dependencies using yarn
         run: ./replay/replayapi/scripts/install-deps.sh
       - name: Create source distribution and Dockerfile
