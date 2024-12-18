@@ -150,7 +150,7 @@ jobs:
         run: make install-python-dependencies
       - name: Checkout replayapi
         run: |
-          mkdir replay && git clone -C replay https://github.com/replayio-public/replayapi.git && cd replay/replayapi && git checkout 59551569f5e3277991175de0a47ea5ea0e69ce95
+          mkdir replay && git -C replay clone https://github.com/replayio-public/replayapi.git && cd replay/replayapi && git checkout 59551569f5e3277991175de0a47ea5ea0e69ce95
       - name: Set up NodeJS for replayapi
         uses: actions/setup-node@v4
         with:
