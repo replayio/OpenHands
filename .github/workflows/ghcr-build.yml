@@ -170,11 +170,11 @@ jobs:
             ${{ runner.os }}-yarn-
       - name: Install replay devtools yarn dependencies
         run: |
-          cd replay/devtools
+          cd $REPLAY_DIR/devtools
           yarn
       - name: Install replayapi yarn dependencies
         run: |
-          cd replay/replayapi
+          cd $REPLAY_DIR/replayapi
           export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
           corepack enable
           yarn
