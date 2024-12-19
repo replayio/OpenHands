@@ -4,10 +4,10 @@ name: Run Replay Regression Tests
 # Wait until the Docker workflow has completed, since our regression tests depend
 # on the containers being published.
 on:
-  workflow_run:
-    workflows: [Docker]
-    types: [completed]
-
+  push:
+    branches:
+      - main
+  pull_request:
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
 concurrency:
@@ -16,7 +16,6 @@ concurrency:
 
 jobs:
   check-for-regressions:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # don't stop the job if a matrix entry fails
