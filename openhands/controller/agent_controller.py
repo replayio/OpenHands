@@ -140,6 +140,8 @@ class AgentController:
         self._stuck_detector = StuckDetector(self.state)
         self.status_callback = status_callback
 
+        self.replay_phase = ReplayDebuggingPhase.Normal
+
     async def close(self) -> None:
         """Closes the agent controller, canceling any ongoing tasks and unsubscribing from the event stream.
 
@@ -294,6 +296,7 @@ class AgentController:
                 if handle_replay_enhance_observation(self.state, observation):
                     # We are prompting the agent to start the analysis.
                     self.state.replay_phase = ReplayDebuggingPhase.Analysis
+                    self.agent.replay_phase_changed(ReplayDebuggingPhase.Analysis)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:
                 await self.set_agent_state_to(AgentState.RUNNING)
@@ -331,7 +334,8 @@ class AgentController:
                 # TODO: Add dedicated tools for managing the analysis state machine.
 
                 # Tell the agent to stop analyzing and start editing:
-                self.state.replay_phase = ReplayDebuggingPhase.Normal
+                self.state.replay_phase = ReplayDebuggingPhase.Edit
+                self.agent.replay_phase_changed(ReplayDebuggingPhase.Edit)
                 self.event_stream.add_event(
                     MessageAction(content='Implement the changes.'),
                     EventSource.USER,

@@ -14,6 +14,7 @@ from litellm import (
 
 from openhands.core.exceptions import FunctionCallNotExistsError
 from openhands.core.logger import openhands_logger as logger
+from openhands.core.schema import ReplayDebuggingPhase
 from openhands.events.action import (
     Action,
     AgentDelegateAction,
@@ -548,7 +549,8 @@ def get_tools(
     codeact_enable_browsing: bool = False,
     codeact_enable_llm_editor: bool = False,
     codeact_enable_jupyter: bool = False,
-    # codeact_enable_replay: bool = False,
+    codeact_enable_replay: bool = False,
+    codeact_replay_phase: ReplayDebuggingPhase = ReplayDebuggingPhase.Normal,
 ) -> list[ChatCompletionToolParam]:
     tools = [CmdRunTool, FinishTool]
     if codeact_enable_browsing:
@@ -560,7 +562,19 @@ def get_tools(
     else:
         tools.append(StrReplaceEditorTool)
 
-    # NOTE: Replace generic replay tool with individual purpuseful tools.
-    # if codeact_enable_replay:
-    #     tools.append(ReplayRunCmdTool)
+    if not codeact_enable_replay:
+        # if replay is not involved, get the default list.
+        return tools
+
+    # if replay is involved, give a different list depending on the phase
+    if codeact_enable_replay:
+        if codeact_replay_phase == ReplayDebuggingPhase.Normal:
+            pass  # we use the default set here
+        elif codeact_replay_phase == ReplayDebuggingPhase.Analysis:
+            # TODO curate the list for the analysis phase
+            tools.append(ReplayRunCmdTool)
+        elif codeact_replay_phase == ReplayDebuggingPhase.Edit:
+            # TODO curate the list for the edit phase
+            tools.append(ReplayRunCmdTool)
+
     return tools
