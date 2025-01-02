@@ -381,7 +381,7 @@ class CodeActAgent(Agent):
         if self.mock_function_calling:
             params['mock_function_calling'] = True
         response = self.llm.completion(**params)
-        actions = codeact_function_calling.response_to_actions(response)
+        actions = codeact_function_calling.response_to_actions(response, state)
         for action in actions:
             self.pending_actions.append(action)
         return self.pending_actions.popleft()

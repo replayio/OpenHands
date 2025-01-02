@@ -27,19 +27,22 @@ def scan_recording_id(issue: str) -> str | None:
 def command_annotate_execution_points(
     thought: str, is_workspace_repo: bool
 ) -> ReplayCmdRunAction:
-    command_input = dict()
+    command_input: dict[str, Any] = dict()
     if is_workspace_repo:
         # NOTE: In the resolver workflow, the workdir path is equal to the repo path:
         #    1. We should not append the repo name to the path.
         #    2. The resolver also already hard-reset the repo, so forceDelete is not necessary.
         command_input['isWorkspaceRepoPath'] = True
+        command_input['forceDelete'] = False
     else:
+        command_input['isWorkspaceRepoPath'] = False
         command_input['forceDelete'] = True
+    command_input['prompt'] = thought
 
     action = ReplayCmdRunAction(
         command_name='initial-analysis',
         command_args=command_input,
-        in_workspace_dir=True,
+        in_workspace_dir=is_workspace_repo,
         thought=thought,
         keep_prompt=False,
         # hidden=True, # The hidden implementation causes problems, so we added replay stuff to `filter_out` instead.
@@ -53,12 +56,12 @@ def replay_enhance_action(state: State, is_workspace_repo: bool) -> Action | Non
         # 1. Get current user prompt.
         latest_user_message = state.get_last_user_message()
         if latest_user_message:
-            logger.info(f'[REPLAY] latest_user_message id is {latest_user_message.id}')
+            logger.debug(f'[REPLAY] latest_user_message id is {latest_user_message.id}')
             # 2. Check if it has a recordingId.
             recording_id = scan_recording_id(latest_user_message.content)
             if recording_id:
                 # 3. Analyze recording and start the enhancement action.
-                logger.info(
+                logger.debug(
                     f'[REPLAY] Enhancing prompt for Replay recording "{recording_id}"...'
                 )
                 state.extra_data['replay_enhance_prompt_id'] = latest_user_message.id
@@ -74,34 +77,36 @@ class AnnotatedLocation(TypedDict, total=False):
     line: int
 
 
+class AnalysisToolMetadata(TypedDict, total=False):
+    recordingId: str
+
+
 class AnnotateResult(TypedDict, total=False):
-    status: str
     point: str
     commentText: str | None
     annotatedRepo: str
     annotatedLocations: list[AnnotatedLocation]
     pointLocation: str | None
+    metadata: AnalysisToolMetadata | None
 
 
-class ReplayCommandResult(TypedDict, total=False):
-    # TODO: Use generics instead of `Any`. We currently cannot that because it raised an error saying that generics are not yet supported. Not sure why.
-    result: Any | None
-    error: str | None
-    errorDetails: str | None
-
-
-def safe_parse_json(text: str):
+def safe_parse_json(text: str) -> dict[str, Any] | None:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         return None
 
 
-def handle_replay_enhance_observation(
+def handle_replay_observation(
     state: State, observation: ReplayCmdOutputObservation
-) -> bool:
+) -> AnalysisToolMetadata | None:
+    """
+    Enhance the user prompt with the results of the replay analysis.
+    Returns the metadata needed for the agent to switch to analysis tools.
+    """
     enhance_action_id = state.extra_data.get('replay_enhance_prompt_id')
-    if enhance_action_id is not None:
+    enhance_observed = state.extra_data.get('replay_enhance_observed', False)
+    if enhance_action_id is not None and not enhance_observed:
         user_message: MessageAction | None = next(
             (
                 m
@@ -111,11 +116,16 @@ def handle_replay_enhance_observation(
             None,
         )
         assert user_message
+        state.extra_data['replay_enhance_observed'] = True
 
-        output: ReplayCommandResult = safe_parse_json(observation.content)
-        if output and output.get('result'):
+        result: AnnotateResult = cast(
+            AnnotateResult, safe_parse_json(observation.content)
+        )
+        if result and result.get('metadata'):
+            metadata = result.get('metadata')
+            return metadata
+        elif result and result.get('annotatedRepo'):
             original_prompt = user_message.content
-            result: AnnotateResult = cast(AnnotateResult, output.get('result', {}))
             annotated_repo_path = result.get('annotatedRepo', '')
             comment_text = result.get('commentText', '')
             react_component_name = result.get('reactComponentName', '')
@@ -146,10 +156,10 @@ def handle_replay_enhance_observation(
             user_message.content = f'{enhancement}\n\n{original_prompt}'
             # user_message.content = enhancement
             logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
-            return True
+            return None
         else:
             logger.warning(
-                f'DDBG Replay command did not return a result. Instead it returned: {str(output)}'
+                f'DDBG Replay command did not return an interpretable result. Observed: {str(observation.content)}'
             )
 
-    return False
+    return None

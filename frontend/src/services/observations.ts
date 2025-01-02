@@ -22,7 +22,7 @@ export function handleObservationMessage(message: ObservationMessage) {
       break;
     }
     case ObservationType.RUN_REPLAY:
-      store.dispatch(appendOutput(message.content));
+      store.dispatch(appendOutput(`[REPLAY] ${message.content}`));
       break;
     case ObservationType.RUN_IPYTHON:
       // FIXME: render this as markdown

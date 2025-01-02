@@ -71,6 +71,16 @@ const messageActions = {
       store.dispatch(appendJupyterInput(message.args.code));
     }
   },
+  [ActionType.RUN_REPLAY]: (message: ActionMessage) => {
+    if (message.args.command_name) {
+      store.dispatch(appendJupyterInput(`[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`));
+    }
+  },
+  [ActionType.REPLAY_UPDATE_PHASE]: (message: ActionMessage) => {
+    if (message.args.command_name) {
+      store.dispatch(appendJupyterInput(`[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`));
+    }
+  },
 };
 
 function getRiskText(risk: ActionSecurityRisk) {

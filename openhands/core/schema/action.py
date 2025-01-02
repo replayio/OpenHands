@@ -40,6 +40,10 @@ class ActionTypeSchema(BaseModel):
     """Runs a Replay command.
     """
 
+    REPLAY_UPDATE_PHASE: str = Field(default='replay_update_phase')
+    """Replay phase change.
+    """
+
     BROWSE: str = Field(default='browse')
     """Opens a web page.
     """

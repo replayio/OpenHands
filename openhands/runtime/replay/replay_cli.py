@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 from typing import Any
 
@@ -26,50 +27,86 @@ class ReplayCli:
             # Hardcode the path for now. We won't need it in the long run.
             command_args['workspacePath'] = self.bash_session.workdir
 
-        # Create temp file for input
-        with tempfile.NamedTemporaryFile(
-            mode='w', suffix='.json', delete=False
-        ) as input_file:
+        with (
+            tempfile.NamedTemporaryFile(
+                mode='w+', suffix='.json', delete=True
+            ) as input_file,
+            tempfile.NamedTemporaryFile(
+                mode='w+', suffix='.json', delete=True
+            ) as output_file,
+        ):
+            # Give permissions.
+            os.chmod(input_file.name, 0o666)
+            os.chmod(output_file.name, 0o666)
+
+            # Prepare input.
             input: dict[str, Any] = dict()
             input['command'] = action.command_name
             input['args'] = command_args
-            json.dump(action.command_args, input_file)
+            input_file.seek(0)
+            json.dump(input, input_file)
+            input_file.flush()
             input_path = input_file.name
-        # Create temp file for output
-        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as output_file:
+
+            # Construct and execute command.
             output_path = output_file.name
-        # Construct and execute command
-        command = f'/replay/replayapi/scripts/main-tool.sh {input_path} {output_path}'
+            command = f'/replay/replayapi/main-tool.sh {input_path} {output_path}'
 
-        if action.in_workspace_dir:
-            # Execute command from workspace directory.
-            command = f'pushd {self.bash_session.workdir} > /dev/null; {command}; popd > /dev/null'
+            if action.in_workspace_dir:
+                # Work from the workspace directory.
+                command = f'pushd {self.bash_session.workdir} > /dev/null; {command}; popd > /dev/null'
 
-        cmd_action = CmdRunAction(
-            command=command,
-            thought=action.thought,
-            blocking=action.blocking,
-            keep_prompt=action.keep_prompt,
-            hidden=action.hidden,
-            confirmation_state=action.confirmation_state,
-            security_risk=action.security_risk,
-        )
-        cmd_action.timeout = 600
-        obs = self.bash_session.run(cmd_action)
+            cmd_action = CmdRunAction(
+                command=command,
+                thought=action.thought,
+                blocking=action.blocking,
+                keep_prompt=action.keep_prompt,
+                hidden=action.hidden,
+                confirmation_state=action.confirmation_state,
+                security_risk=action.security_risk,
+            )
+            cmd_action.timeout = 600
 
-        if isinstance(obs, ErrorObservation):
-            return obs
+            obs = self.bash_session.run(cmd_action)
 
-        # Read output from output_path.
-        with open(output_path, 'r') as output_file:
-            output = json.load(output_file)
+            if isinstance(obs, ErrorObservation):
+                return obs
 
-        # we might not actually need a separate observation type for replay...
-        return ReplayCmdOutputObservation(
-            command_id=obs.command_id,
-            command=obs.command,
-            exit_code=obs.exit_code,
-            hidden=obs.hidden,
-            interpreter_details=obs.interpreter_details,
-            content=output,
-        )
+            if obs.exit_code != 0:
+                return ErrorObservation(
+                    f'ReplayCli command "{obs.command}" failed with exit code {obs.exit_code} for input_path={input_path}: STDOUT={obs.content}'
+                )
+
+            try:
+                output_file.seek(0)
+                content = output_file.read()
+                output: dict = json.loads(content)
+            except json.JSONDecodeError:
+                if content == '':
+                    return ErrorObservation(
+                        f'ReplayCli result is empty (command={obs.command}): STDOUT={obs.content}',
+                    )
+                return ErrorObservation(
+                    f'Failed to parse JSON from ReplayCli result (command={obs.command}): STDOUT={obs.content}; FILE_CONTENTS={content}',
+                )
+            except Exception as e:
+                return ErrorObservation(
+                    f'Failed to read ReplayCli result: {str(e)}',
+                )
+
+            if output.get('status') != 'success':
+                return ErrorObservation(
+                    f'ReplayCli result was not a success: {output.get("error")}\n  errorDetails={output.get("errorDetails")}'
+                )
+
+            result = output.get('result')
+
+            return ReplayCmdOutputObservation(
+                command_id=obs.command_id,
+                command=obs.command,
+                exit_code=obs.exit_code,
+                hidden=obs.hidden,
+                interpreter_details=obs.interpreter_details,
+                # NOTE: content must always be str.
+                content=json.dumps(result),
+            )

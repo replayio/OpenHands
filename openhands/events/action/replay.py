@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from openhands.core.schema import ActionType
+from openhands.core.schema.replay import ReplayDebuggingPhase
 from openhands.events.action.action import (
     Action,
     ActionConfirmationStatus,
@@ -30,7 +31,7 @@ class ReplayCmdRunAction(Action):
     security_risk: ActionSecurityRisk | None = None
 
     # Whether to execute the command from the workspace directory, independent of CWD.
-    in_workspace_dir: bool = True
+    in_workspace_dir: bool = False
 
     # Other Replay fields.
     recording_id: str = ''
@@ -38,11 +39,33 @@ class ReplayCmdRunAction(Action):
 
     @property
     def message(self) -> str:
-        return f'ReplayCommand: {self.command_name} {json.dumps(self.command_args)}'
+        return f'[REPLAY] {self.command_name} {json.dumps(self.command_args)}'
 
     def __str__(self) -> str:
         ret = f'**ReplayCmdRunAction (source={self.source})**\n'
         if self.thought:
             ret += f'THOUGHT: {self.thought}\n'
         ret += f'{self.message}'
+        return ret
+
+
+@dataclass
+class ReplayPhaseUpdateAction(Action):
+    new_phase: ReplayDebuggingPhase
+
+    thought: str = ''
+    blocking: bool = False
+    keep_prompt: bool = True
+    hidden: bool = False
+    action: str = ActionType.REPLAY_UPDATE_PHASE
+    runnable: ClassVar[bool] = True
+    confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
+    security_risk: ActionSecurityRisk | None = None
+
+    @property
+    def message(self) -> str:
+        return f'ReplayPhaseUpdate: {self.new_phase}'
+
+    def __str__(self) -> str:
+        ret = f'{self.message}'
         return ret
