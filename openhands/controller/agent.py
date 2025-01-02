@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type
 
+from openhands.core.schema.replay import ReplayDebuggingPhase
+
 if TYPE_CHECKING:
     from openhands.controller.state.state import State
     from openhands.core.config import AgentConfig
-    from openhands.core.schema.replay import ReplayDebuggingPhase
     from openhands.events.action import Action
 from openhands.core.exceptions import (
     AgentAlreadyRegisteredError,
