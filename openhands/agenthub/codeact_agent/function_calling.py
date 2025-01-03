@@ -42,7 +42,7 @@ ReplayInspectDataTool = ChatCompletionToolParam(
     type='function',
     function=ChatCompletionToolParamFunctionChunk(
         name='inspect-data',
-        description=_REPLAY_INSPECT_DATA_DESCRIPTION,
+        description=_REPLAY_INSPECT_DATA_DESCRIPTION.strip(),
         parameters={
             'type': 'object',
             'properties': {
@@ -52,7 +52,7 @@ ReplayInspectDataTool = ChatCompletionToolParam(
                 },
                 'point': {
                     'type': 'string',
-                    'description': 'The point at which to inspect the runtime. The first point comes from the `INITIAL ANALYSIS`.',
+                    'description': 'The point at which to inspect the runtime. The first point comes from the `thisPoint` in the Initial analysis.',
                 },
             },
             'required': ['expression', 'point'],
@@ -72,7 +72,7 @@ ReplayInspectPointTool = ChatCompletionToolParam(
     type='function',
     function=ChatCompletionToolParamFunctionChunk(
         name='inspect-point',
-        description=_REPLAY_INSPECT_POINT_DESCRIPTION,
+        description=_REPLAY_INSPECT_POINT_DESCRIPTION.strip(),
         parameters={
             'type': 'object',
             'properties': {
@@ -97,7 +97,7 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
     type='function',
     function=ChatCompletionToolParamFunctionChunk(
         name='submit-hypothesis',
-        description=_REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION,
+        description=_REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION.strip(),
         parameters={
             'type': 'object',
             'properties': {

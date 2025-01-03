@@ -39,7 +39,7 @@ class ReplayCmdRunAction(Action):
 
     @property
     def message(self) -> str:
-        return f'[REPLAY] {self.command_name} {json.dumps(self.command_args)}'
+        return f'[REPLAY] {json.dumps({"command": self.command_name, "args": self.command_args})}'
 
     def __str__(self) -> str:
         ret = f'**ReplayCmdRunAction (source={self.source})**\n'

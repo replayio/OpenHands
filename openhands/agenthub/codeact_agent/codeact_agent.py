@@ -337,7 +337,7 @@ class CodeActAgent(Agent):
             codeact_replay_phase=phase,
         )
         logger.debug(
-            f'TOOLS loaded for CodeActAgent (replay phase {phase}): {json.dumps(self.tools, indent=2)}'
+            f'[REPLAY] CodeActAgent.replay_phase_changed({phase}). New tools: {json.dumps(self.tools, indent=2)}'
         )
 
     def step(self, state: State) -> Action:

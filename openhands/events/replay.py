@@ -84,8 +84,8 @@ class AnalysisToolMetadata(TypedDict, total=False):
 class AnnotateResult(TypedDict, total=False):
     point: str
     commentText: str | None
-    annotatedRepo: str
-    annotatedLocations: list[AnnotatedLocation]
+    annotatedRepo: str | None
+    annotatedLocations: list[AnnotatedLocation] | None
     pointLocation: str | None
     metadata: AnalysisToolMetadata | None
 
@@ -95,6 +95,23 @@ def safe_parse_json(text: str) -> dict[str, Any] | None:
         return json.loads(text)
     except json.JSONDecodeError:
         return None
+
+
+def split_metadata(result):
+    if 'metadata' not in result:
+        return {}, result
+    metadata = result['metadata']
+    data = dict(result)
+    del data['metadata']
+    return metadata, data
+
+
+def enhance_prompt(user_message: MessageAction, prefix: str, suffix: str | None = None):
+    if prefix != '':
+        user_message.content = f'{prefix}\n\n{user_message.content}'
+    if suffix is not None:
+        user_message.content = f'{user_message.content}\n\n{suffix}'
+    logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
 
 
 def handle_replay_observation(
@@ -121,11 +138,17 @@ def handle_replay_observation(
         result: AnnotateResult = cast(
             AnnotateResult, safe_parse_json(observation.content)
         )
-        if result and result.get('metadata'):
-            metadata = result.get('metadata')
+
+        if result and 'metadata' in result:
+            metadata, data = split_metadata(result)
+            intro = 'This bug had a timetravel debugger recording which has been analyzed. Use the analysis results and the timetravel debugger `inspect-*` tools to find the bug. Once found `submit-hypothesis`, so your results can be used to implement the solution.\n'
+            enhance_prompt(
+                user_message,
+                intro,
+                f'## Initial Analysis\n{json.dumps(data, indent=2)}',
+            )
             return metadata
         elif result and result.get('annotatedRepo'):
-            original_prompt = user_message.content
             annotated_repo_path = result.get('annotatedRepo', '')
             comment_text = result.get('commentText', '')
             react_component_name = result.get('reactComponentName', '')
@@ -136,30 +159,25 @@ def handle_replay_observation(
             # TODO: Move this to a prompt template file.
             if comment_text:
                 if react_component_name:
-                    enhancement = f'There is a change needed to the {react_component_name} component.\n'
+                    intro = f'There is a change needed to the {react_component_name} component.\n'
                 else:
-                    enhancement = (
-                        f'There is a change needed in {annotated_repo_path}:\n'
-                    )
-                enhancement += f'{comment_text}\n\n'
+                    intro = f'There is a change needed in {annotated_repo_path}:\n'
+                intro += f'{comment_text}\n\n'
             elif console_error:
-                enhancement = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
-                enhancement += f'{console_error}\n\n'
+                intro = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
+                intro += f'{console_error}\n\n'
 
-            enhancement += '<IMPORTANT>\n'
-            enhancement += 'Information about a reproduction of the problem is available in source comments.\n'
-            enhancement += 'You must search for these comments and use them to get a better understanding of the problem.\n'
-            enhancement += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
-            enhancement += '</IMPORTANT>\n'
+            intro += '<IMPORTANT>\n'
+            intro += 'Information about a reproduction of the problem is available in source comments.\n'
+            intro += 'You must search for these comments and use them to get a better understanding of the problem.\n'
+            intro += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
+            intro += '</IMPORTANT>\n'
 
-            # Enhance:
-            user_message.content = f'{enhancement}\n\n{original_prompt}'
-            # user_message.content = enhancement
-            logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
+            enhance_prompt(user_message, intro)
             return None
         else:
             logger.warning(
-                f'DDBG Replay command did not return an interpretable result. Observed: {str(observation.content)}'
+                f'[REPLAY] Replay observation cannot be interpreted. Observed content: {str(observation.content)}'
             )
 
     return None
