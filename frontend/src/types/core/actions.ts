@@ -38,16 +38,6 @@ export interface IPythonAction extends OpenHandsActionEvent<"run_ipython"> {
   };
 }
 
-export interface ReplayAction extends OpenHandsActionEvent<"run_replay"> {
-  source: "agent";
-  args: {
-    command: string;
-    confirmation_state: "confirmed" | "rejected" | "awaiting_confirmation";
-    thought: string;
-    hidden?: boolean;
-  };
-}
-
 export interface FinishAction extends OpenHandsActionEvent<"finish"> {
   source: "agent";
   args: {

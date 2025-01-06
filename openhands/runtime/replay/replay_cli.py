@@ -4,9 +4,16 @@ import tempfile
 from typing import Any
 
 from openhands.events.action.commands import CmdRunAction
-from openhands.events.action.replay import ReplayCmdRunAction
+from openhands.events.action.replay import (
+    ReplayCmdRunActionBase,
+    ReplayToolCmdRunAction,
+)
 from openhands.events.observation.error import ErrorObservation
-from openhands.events.observation.replay import ReplayCmdOutputObservation
+from openhands.events.observation.replay import (
+    ReplayCmdOutputObservationBase,
+    ReplayInternalCmdOutputObservation,
+    ReplayToolCmdOutputObservation,
+)
 from openhands.runtime.utils.bash import BashSession
 
 
@@ -15,8 +22,8 @@ class ReplayCli:
         self.bash_session = bash_session
 
     async def run_action(
-        self, action: ReplayCmdRunAction
-    ) -> ReplayCmdOutputObservation | ErrorObservation:
+        self, action: ReplayCmdRunActionBase
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
         # Fix up inputs:
         command_args = action.command_args or dict()
         if action.recording_id != '':
@@ -100,8 +107,12 @@ class ReplayCli:
                 )
 
             result = output.get('result')
-
-            return ReplayCmdOutputObservation(
+            ObservationClass = (
+                ReplayToolCmdOutputObservation
+                if isinstance(action, ReplayToolCmdRunAction)
+                else ReplayInternalCmdOutputObservation
+            )
+            return ObservationClass(
                 command_id=obs.command_id,
                 command=obs.command,
                 exit_code=obs.exit_code,

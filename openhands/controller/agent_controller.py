@@ -36,7 +36,10 @@ from openhands.events.action import (
     ModifyTaskAction,
     NullAction,
 )
-from openhands.events.action.replay import ReplayCmdRunAction, ReplayPhaseUpdateAction
+from openhands.events.action.replay import (
+    ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
+)
 from openhands.events.event import Event
 from openhands.events.observation import (
     AgentDelegateObservation,
@@ -45,8 +48,8 @@ from openhands.events.observation import (
     NullObservation,
     Observation,
 )
-from openhands.events.observation.replay import ReplayCmdOutputObservation
-from openhands.events.replay import handle_replay_observation
+from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
+from openhands.events.replay import handle_replay_internal_observation
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
 from openhands.utils.shutdown_listener import should_continue
@@ -76,8 +79,8 @@ class AgentController:
         NullObservation,
         ChangeAgentStateAction,
         AgentStateChangedObservation,
-        ReplayCmdRunAction,
-        ReplayCmdOutputObservation,
+        ReplayInternalCmdRunAction,
+        ReplayInternalCmdOutputObservation,
     )
 
     def __init__(
@@ -310,8 +313,9 @@ class AgentController:
 
         if self._pending_action and self._pending_action.id == observation.cause:
             self._pending_action = None
-            if isinstance(observation, ReplayCmdOutputObservation):
-                analysis_tool_metadata = handle_replay_observation(
+            if isinstance(observation, ReplayInternalCmdOutputObservation):
+                # NOTE: Currently, the only internal command is the initial-analysis command.
+                analysis_tool_metadata = handle_replay_internal_observation(
                     self.state, observation
                 )
                 if analysis_tool_metadata:

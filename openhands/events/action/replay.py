@@ -11,8 +11,9 @@ from openhands.events.action.action import (
 )
 
 
+# NOTE: We need the same class twice because a lot of the agent logic is based on isinstance checks.
 @dataclass
-class ReplayCmdRunAction(Action):
+class ReplayCmdRunActionBase(Action):
     # Name of the command in @replayapi/cli.
     command_name: str
 
@@ -25,7 +26,6 @@ class ReplayCmdRunAction(Action):
     blocking: bool = True
     keep_prompt: bool = False
     hidden: bool = False
-    action: str = ActionType.RUN_REPLAY
     runnable: ClassVar[bool] = True
     confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
     security_risk: ActionSecurityRisk | None = None
@@ -42,11 +42,23 @@ class ReplayCmdRunAction(Action):
         return f'[REPLAY] {json.dumps({"command": self.command_name, "args": self.command_args})}'
 
     def __str__(self) -> str:
-        ret = f'**ReplayCmdRunAction (source={self.source})**\n'
+        ret = f'**{self.__class__.__name__} (source={self.source})**\n'
         if self.thought:
             ret += f'THOUGHT: {self.thought}\n'
         ret += f'{self.message}'
         return ret
+
+
+# The pure "command run actions" are used internally and should be hidden from the agent.
+@dataclass
+class ReplayInternalCmdRunAction(ReplayCmdRunActionBase):
+    action: str = ActionType.RUN_REPLAY_INTERNAL
+
+
+# The tool actions should be visible to the agent.
+@dataclass
+class ReplayToolCmdRunAction(ReplayCmdRunActionBase):
+    action: str = ActionType.RUN_REPLAY_TOOL
 
 
 @dataclass
@@ -64,7 +76,7 @@ class ReplayPhaseUpdateAction(Action):
 
     @property
     def message(self) -> str:
-        return f'ReplayPhaseUpdate: {self.new_phase}'
+        return f'{self.__class__.__name__}: {self.new_phase}'
 
     def __str__(self) -> str:
         ret = f'{self.message}'

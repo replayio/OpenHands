@@ -6,8 +6,8 @@ from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
 from openhands.events.action.action import Action
 from openhands.events.action.message import MessageAction
-from openhands.events.action.replay import ReplayCmdRunAction
-from openhands.events.observation.replay import ReplayCmdOutputObservation
+from openhands.events.action.replay import ReplayInternalCmdRunAction
+from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
 
 
 def scan_recording_id(issue: str) -> str | None:
@@ -26,7 +26,7 @@ def scan_recording_id(issue: str) -> str | None:
 # Produce the command string for the `annotate-execution-points` command.
 def command_annotate_execution_points(
     thought: str, is_workspace_repo: bool
-) -> ReplayCmdRunAction:
+) -> ReplayInternalCmdRunAction:
     command_input: dict[str, Any] = dict()
     if is_workspace_repo:
         # NOTE: In the resolver workflow, the workdir path is equal to the repo path:
@@ -39,7 +39,7 @@ def command_annotate_execution_points(
         command_input['forceDelete'] = True
     command_input['prompt'] = thought
 
-    action = ReplayCmdRunAction(
+    action = ReplayInternalCmdRunAction(
         command_name='initial-analysis',
         command_args=command_input,
         in_workspace_dir=is_workspace_repo,
@@ -114,8 +114,8 @@ def enhance_prompt(user_message: MessageAction, prefix: str, suffix: str | None 
     logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
 
 
-def handle_replay_observation(
-    state: State, observation: ReplayCmdOutputObservation
+def handle_replay_internal_observation(
+    state: State, observation: ReplayInternalCmdOutputObservation
 ) -> AnalysisToolMetadata | None:
     """
     Enhance the user prompt with the results of the replay analysis.

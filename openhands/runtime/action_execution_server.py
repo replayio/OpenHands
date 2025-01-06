@@ -36,7 +36,11 @@ from openhands.events.action import (
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
-    ReplayCmdRunAction,
+)
+from openhands.events.action.replay import (
+    ReplayCmdRunActionBase,
+    ReplayInternalCmdRunAction,
+    ReplayToolCmdRunAction,
 )
 from openhands.events.observation import (
     CmdOutputObservation,
@@ -45,7 +49,9 @@ from openhands.events.observation import (
     FileWriteObservation,
     IPythonRunCellObservation,
     Observation,
-    ReplayCmdOutputObservation,
+)
+from openhands.events.observation.replay import (
+    ReplayCmdOutputObservationBase,
 )
 from openhands.events.serialization import event_from_dict, event_to_dict
 from openhands.runtime.browser import browse
@@ -179,9 +185,19 @@ class ActionExecutor:
         obs = await call_sync_from_async(self.bash_session.run, action)
         return obs
 
-    async def run_replay(
-        self, action: ReplayCmdRunAction
-    ) -> ReplayCmdOutputObservation | ErrorObservation:
+    async def run_replay_internal(
+        self, action: ReplayInternalCmdRunAction
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
+        return await self._run_replay(action)
+
+    async def run_replay_tool(
+        self, action: ReplayToolCmdRunAction
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
+        return await self._run_replay(action)
+
+    async def _run_replay(
+        self, action: ReplayCmdRunActionBase
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
         return await self.replay_cli.run_action(action)
 
     async def run_ipython(self, action: IPythonRunCellAction) -> Observation:

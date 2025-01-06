@@ -21,17 +21,22 @@ from openhands.events.action import (
     IPythonRunCellAction,
     MessageAction,
 )
+from openhands.events.action.replay import (
+    ReplayCmdRunActionBase,
+    ReplayPhaseUpdateAction,
+    ReplayToolCmdRunAction,
+)
 from openhands.events.observation import (
     AgentDelegateObservation,
     BrowserOutputObservation,
     CmdOutputObservation,
     FileEditObservation,
     IPythonRunCellObservation,
-    ReplayCmdOutputObservation,
     UserRejectObservation,
 )
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.observation import Observation
+from openhands.events.observation.replay import ReplayCmdOutputObservationBase
 from openhands.events.replay import replay_enhance_action
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
@@ -149,6 +154,9 @@ class CodeActAgent(Agent):
                 IPythonRunCellAction,
                 FileEditAction,
                 BrowseInteractiveAction,
+                # Replay tools
+                ReplayToolCmdRunAction,
+                ReplayPhaseUpdateAction,
             ),
         ) or (
             isinstance(action, (AgentFinishAction, CmdRunAction))
@@ -194,16 +202,8 @@ class CodeActAgent(Agent):
                     content=content,
                 )
             ]
-        # elif isinstance(action, ReplayCmdRunAction) and action.source == 'user':
-        #     content = [
-        #         TextContent(text=f'User executed replay command:\n{action.message}')
-        #     ]
-        #     return [
-        #         Message(
-        #             role='user',
-        #             content=content,
-        #         )
-        #     ]
+        elif isinstance(action, ReplayCmdRunActionBase) and action.source == 'user':
+            raise Exception('NYI: ReplayCmdRunAction triggered by user')
         return []
 
     def get_observation_message(
@@ -251,7 +251,7 @@ class CodeActAgent(Agent):
                 )
             text += f'\n[Command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
-        elif isinstance(obs, ReplayCmdOutputObservation):
+        elif isinstance(obs, ReplayCmdOutputObservationBase):
             # if it doesn't have tool call metadata, it was triggered by a user action
             if obs.tool_call_metadata is None:
                 text = truncate_content(

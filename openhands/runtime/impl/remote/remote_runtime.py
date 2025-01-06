@@ -10,19 +10,21 @@ import requests
 import tenacity
 
 from openhands.core.config import AppConfig
-from openhands.core.logger import openhands_logger as logger
 from openhands.events import EventStream
 from openhands.events.action import (
     BrowseInteractiveAction,
     BrowseURLAction,
     CmdRunAction,
-    ReplayCmdRunAction,
     FileEditAction,
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
 )
 from openhands.events.action.action import Action
+from openhands.events.action.replay import (
+    ReplayInternalCmdRunAction,
+    ReplayToolCmdRunAction,
+)
 from openhands.events.observation import (
     ErrorObservation,
     NullObservation,
@@ -461,14 +463,16 @@ class RemoteRuntime(Runtime):
                     return self._send_request(method, url, True, **kwargs)
                 else:
                     raise e
-
             else:
                 raise e
 
     def run(self, action: CmdRunAction) -> Observation:
         return self.run_action(action)
 
-    def run_replay(self, action: ReplayCmdRunAction) -> Observation:
+    def run_replay_internal(self, action: ReplayInternalCmdRunAction) -> Observation:
+        return self.run_action(action)
+
+    def run_replay_tool(self, action: ReplayToolCmdRunAction) -> Observation:
         return self.run_action(action)
 
     def run_ipython(self, action: IPythonRunCellAction) -> Observation:

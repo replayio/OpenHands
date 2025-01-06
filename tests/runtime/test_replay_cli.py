@@ -7,8 +7,8 @@ from conftest import (
     _load_runtime,
 )
 
-from openhands.events.action.replay import ReplayCmdRunAction
-from openhands.events.observation.replay import ReplayCmdOutputObservation
+from openhands.events.action.replay import ReplayInternalCmdRunAction
+from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
 
 # ============================================================================================================================
 # Tests
@@ -25,15 +25,15 @@ def test_initial_analysis(temp_dir, runtime_cls, run_as_openhands):
 
     try:
         obs = runtime.run_action(
-            ReplayCmdRunAction(
+            ReplayInternalCmdRunAction(
                 command_name='initial-analysis',
                 command_args=args,
                 keep_prompt=False,
-                # hidden=True, # The hidden implementation causes problems, so we added replay stuff to `filter_out` instead.
+                # hidden=True, # hidden basically does not work the way we want it to, so we had to hardcode filtering near the `filter_out` check.
             )
         )
         assert isinstance(
-            obs, ReplayCmdOutputObservation
+            obs, ReplayInternalCmdOutputObservation
         ), f'Bad observation: {repr(obs)}'
 
         try:

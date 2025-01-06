@@ -25,9 +25,11 @@ from openhands.events.action import (
     FileEditAction,
     IPythonRunCellAction,
     MessageAction,
-    ReplayCmdRunAction,
 )
-from openhands.events.action.replay import ReplayPhaseUpdateAction
+from openhands.events.action.replay import (
+    ReplayPhaseUpdateAction,
+    ReplayToolCmdRunAction,
+)
 from openhands.events.tool import ToolCallMetadata
 
 # ---------------------------------------------------------
@@ -586,12 +588,12 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
             if tool_call.function.name == 'execute_bash':
                 action = CmdRunAction(**arguments)
             elif tool_call.function.name == 'inspect-data':
-                action = ReplayCmdRunAction(
+                action = ReplayToolCmdRunAction(
                     command_name='inspect-data',
                     command_args=arguments | {'recordingId': state.replay_recording_id},
                 )
             elif tool_call.function.name == 'inspect-point':
-                action = ReplayCmdRunAction(
+                action = ReplayToolCmdRunAction(
                     command_name='inspect-point',
                     command_args=arguments | {'recordingId': state.replay_recording_id},
                 )
