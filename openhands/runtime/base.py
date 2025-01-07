@@ -23,6 +23,7 @@ from openhands.events.action import (
 )
 from openhands.events.action.replay import (
     ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
     ReplayToolCmdRunAction,
 )
 from openhands.events.event import Event
@@ -287,6 +288,10 @@ class Runtime(FileEditRuntimeMixin):
 
     @abstractmethod
     def run_replay_tool(self, action: ReplayToolCmdRunAction) -> Observation:
+        pass
+
+    @abstractmethod
+    def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
         pass
 
     @abstractmethod

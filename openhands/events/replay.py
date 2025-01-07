@@ -141,11 +141,12 @@ def handle_replay_internal_observation(
 
         if result and 'metadata' in result:
             metadata, data = split_metadata(result)
-            intro = 'This bug had a timetravel debugger recording which has been analyzed. Use the analysis results and the timetravel debugger `inspect-*` tools to find the bug. Once found `submit-hypothesis`, so your results can be used to implement the solution.\n'
+            prefix = ''
+            suffix = f'* This bug had a timetravel debugger recording. Use below `Initial Analysis` and the timetravel debugger `inspect-*` tools to find the bug. Once found, `submit-hypothesis`, so your analysis can be used to implement the solution.\n\n## Initial Analysis\n{json.dumps(data, indent=2)}'
             enhance_prompt(
                 user_message,
-                intro,
-                f'## Initial Analysis\n{json.dumps(data, indent=2)}',
+                prefix,
+                suffix,
             )
             return metadata
         elif result and result.get('annotatedRepo'):
@@ -159,21 +160,21 @@ def handle_replay_internal_observation(
             # TODO: Move this to a prompt template file.
             if comment_text:
                 if react_component_name:
-                    intro = f'There is a change needed to the {react_component_name} component.\n'
+                    prefix = f'There is a change needed to the {react_component_name} component.\n'
                 else:
-                    intro = f'There is a change needed in {annotated_repo_path}:\n'
-                intro += f'{comment_text}\n\n'
+                    prefix = f'There is a change needed in {annotated_repo_path}:\n'
+                prefix += f'{comment_text}\n\n'
             elif console_error:
-                intro = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
-                intro += f'{console_error}\n\n'
+                prefix = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
+                prefix += f'{console_error}\n\n'
 
-            intro += '<IMPORTANT>\n'
-            intro += 'Information about a reproduction of the problem is available in source comments.\n'
-            intro += 'You must search for these comments and use them to get a better understanding of the problem.\n'
-            intro += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
-            intro += '</IMPORTANT>\n'
+            prefix += '<IMPORTANT>\n'
+            prefix += 'Information about a reproduction of the problem is available in source comments.\n'
+            prefix += 'You must search for these comments and use them to get a better understanding of the problem.\n'
+            prefix += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
+            prefix += '</IMPORTANT>\n'
 
-            enhance_prompt(user_message, intro)
+            enhance_prompt(user_message, prefix)
             return None
         else:
             logger.warning(

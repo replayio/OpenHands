@@ -8,7 +8,7 @@ fi
 export DEBUG=1
 export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
 REPO=replayio-public/bench-devtools-10608
-ISSUE_NUMBER=2
+ISSUE_NUMBER=2 # https://github.com/replayio-public/bench-devtools-10608/issues/2
 ISSUE_TYPE=issue
 COMMENT_ID=""
 LOG_FILE="$TMP_DIR/tmp.log"

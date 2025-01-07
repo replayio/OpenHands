@@ -20,6 +20,7 @@ from openhands.events.action.files import (
 from openhands.events.action.message import MessageAction
 from openhands.events.action.replay import (
     ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
     ReplayToolCmdRunAction,
 )
 from openhands.events.action.tasks import AddTaskAction, ModifyTaskAction
@@ -29,6 +30,7 @@ actions = (
     CmdRunAction,
     ReplayInternalCmdRunAction,
     ReplayToolCmdRunAction,
+    ReplayPhaseUpdateAction,
     IPythonRunCellAction,
     BrowseURLAction,
     BrowseInteractiveAction,

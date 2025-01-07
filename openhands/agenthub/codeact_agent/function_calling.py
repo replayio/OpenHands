@@ -37,7 +37,7 @@ from openhands.events.tool import ToolCallMetadata
 # ---------------------------------------------------------
 _REPLAY_INSPECT_DATA_DESCRIPTION = """
 Explains value, data flow and origin information for `expression` at `point`.
-IMPORTANT: Prefer inspecting deeply nested properties rather than their containing objects and arrays, so as to attain more meaningful data origins.
+IMPORTANT: Prefer using inspect-data over inspect-point.
 """
 
 ReplayInspectDataTool = ChatCompletionToolParam(
@@ -50,7 +50,7 @@ ReplayInspectDataTool = ChatCompletionToolParam(
             'properties': {
                 'expression': {
                     'type': 'string',
-                    'description': 'A valid JS expression. Prefer simple names and member expressions for better data flow and origin information.',
+                    'description': 'A valid JS expression. IMPORTANT: First pick the best expression. If the expression is an object: Prefer "array[0]" over "array" and "o.x" over "o" to get closer to the origin and creation site of important data points. Prefer nested object over primitive expressions.',
                 },
                 'point': {
                     'type': 'string',

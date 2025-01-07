@@ -40,6 +40,7 @@ from openhands.events.action import (
 from openhands.events.action.replay import (
     ReplayCmdRunActionBase,
     ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
     ReplayToolCmdRunAction,
 )
 from openhands.events.observation import (
@@ -199,6 +200,11 @@ class ActionExecutor:
         self, action: ReplayCmdRunActionBase
     ) -> ReplayCmdOutputObservationBase | ErrorObservation:
         return await self.replay_cli.run_action(action)
+
+    async def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
+        return Observation(
+            content=f'ReplayPhaseUpdateAction changed to {ReplayPhaseUpdateAction.new_phase}'
+        )
 
     async def run_ipython(self, action: IPythonRunCellAction) -> Observation:
         if 'jupyter' in self.plugins:

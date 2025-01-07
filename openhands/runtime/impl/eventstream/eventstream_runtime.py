@@ -30,6 +30,7 @@ from openhands.events.action import (
 from openhands.events.action.action import Action
 from openhands.events.action.replay import (
     ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
     ReplayToolCmdRunAction,
 )
 from openhands.events.observation import (
@@ -577,6 +578,9 @@ class EventStreamRuntime(Runtime):
         return self.run_action(action)
 
     def run_replay_tool(self, action: ReplayToolCmdRunAction) -> Observation:
+        return self.run_action(action)
+
+    def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
         return self.run_action(action)
 
     def run_ipython(self, action: IPythonRunCellAction) -> Observation:
