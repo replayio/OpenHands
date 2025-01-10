@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from openhands.core.schema import ObservationType
+from openhands.core.schema.replay import ReplayDebuggingPhase
 from openhands.events.observation.observation import Observation
 
 
@@ -34,3 +35,16 @@ class ReplayInternalCmdOutputObservation(ReplayCmdOutputObservationBase):
 @dataclass
 class ReplayToolCmdOutputObservation(ReplayCmdOutputObservationBase):
     observation: str = ObservationType.RUN_REPLAY_TOOL
+
+
+@dataclass
+class ReplayPhaseUpdateObservation(Observation):
+    new_phase: ReplayDebuggingPhase
+    observation: str = ObservationType.REPLAY_UPDATE_PHASE
+
+    @property
+    def message(self) -> str:
+        return 'Tools were updated.'
+
+    def __str__(self) -> str:
+        return f'**{self.__class__.__name__} (source={self.source}): {self.content}**'

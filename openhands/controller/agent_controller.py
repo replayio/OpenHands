@@ -38,7 +38,6 @@ from openhands.events.action import (
 )
 from openhands.events.action.replay import (
     ReplayInternalCmdRunAction,
-    ReplayPhaseUpdateAction,
 )
 from openhands.events.event import Event
 from openhands.events.observation import (
@@ -48,7 +47,10 @@ from openhands.events.observation import (
     NullObservation,
     Observation,
 )
-from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
+from openhands.events.observation.replay import (
+    ReplayInternalCmdOutputObservation,
+    ReplayPhaseUpdateObservation,
+)
 from openhands.events.replay import handle_replay_internal_observation
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
@@ -272,24 +274,6 @@ class AgentController:
             self.state.outputs = action.outputs
             self.state.metrics.merge(self.state.local_metrics)
             await self.set_agent_state_to(AgentState.REJECTED)
-        elif isinstance(action, ReplayPhaseUpdateAction):
-            new_phase = action.new_phase
-            if self.state.replay_phase == new_phase:
-                raise ValueError(
-                    f'Unexpected ReplayPhaseUpdateAction. Already in phase: {new_phase}'
-                )
-            self.state.replay_phase = new_phase
-            self.agent.replay_phase_changed(new_phase)
-            if new_phase == ReplayDebuggingPhase.Edit:
-                # Tell the agent to stop analyzing and start editing:
-                self.event_stream.add_event(
-                    MessageAction(content='Implement the changes.'),
-                    EventSource.USER,
-                )
-            else:
-                raise NotImplementedError(
-                    f'Unhandled ReplayPhaseUpdateAction: {new_phase}'
-                )
 
     async def _handle_observation(self, observation: Observation) -> None:
         """Handles observation from the event stream.
@@ -325,6 +309,14 @@ class AgentController:
                     ]
                     self.state.replay_phase = ReplayDebuggingPhase.Analysis
                     self.agent.replay_phase_changed(ReplayDebuggingPhase.Analysis)
+            elif isinstance(observation, ReplayPhaseUpdateObservation):
+                new_phase = observation.new_phase
+                if self.state.replay_phase == new_phase:
+                    raise ValueError(
+                        f'Unexpected ReplayPhaseUpdateAction. Already in phase: {new_phase}'
+                    )
+                self.state.replay_phase = new_phase
+                self.agent.replay_phase_changed(new_phase)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:
                 await self.set_agent_state_to(AgentState.RUNNING)

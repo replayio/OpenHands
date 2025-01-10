@@ -36,7 +36,10 @@ from openhands.events.observation import (
 )
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.observation import Observation
-from openhands.events.observation.replay import ReplayCmdOutputObservationBase
+from openhands.events.observation.replay import (
+    ReplayCmdOutputObservationBase,
+    ReplayPhaseUpdateObservation,
+)
 from openhands.events.replay import replay_enhance_action
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
@@ -264,6 +267,17 @@ class CodeActAgent(Agent):
                 )
             text += f'\n[Replay command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
+        elif isinstance(obs, ReplayPhaseUpdateObservation):
+            # NOTE: The phase change itself is handled in AgentController.
+            new_phase = obs.new_phase
+            if new_phase == ReplayDebuggingPhase.Edit:
+                # Tell the agent to stop analyzing and start editing:
+                text = "You have concluded the analysis. Review, then implement the hypothesized changes using the edit tools available to you. The code is available in the workspace. Don't stop. Fix the bug."
+                message = Message(role='user', content=[TextContent(text=text)])
+            else:
+                raise NotImplementedError(
+                    f'Unhandled ReplayPhaseUpdateAction: {new_phase}'
+                )
         elif isinstance(obs, IPythonRunCellObservation):
             text = obs.content
             # replace base64 images with a placeholder

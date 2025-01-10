@@ -17,6 +17,9 @@ enum ObservationType {
   // The output of a tool replay command
   RUN_REPLAY_TOOL = "run_replay_tool",
 
+  // The output of a tool replay command
+  REPLAY_UPDATE_PHASE = "replay_update_phase",
+
   // A message from the user
   CHAT = "chat",
 

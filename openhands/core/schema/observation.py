@@ -32,6 +32,10 @@ class ObservationTypeSchema(BaseModel):
     """Runs a Replay tool command.
     """
 
+    REPLAY_UPDATE_PHASE: str = Field(default='replay_update_phase')
+    """Replay phase change.
+    """
+
     CHAT: str = Field(default='chat')
     """A message from the user
     """

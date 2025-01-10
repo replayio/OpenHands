@@ -16,6 +16,7 @@ from openhands.events.observation.observation import Observation
 from openhands.events.observation.reject import UserRejectObservation
 from openhands.events.observation.replay import (
     ReplayInternalCmdOutputObservation,
+    ReplayPhaseUpdateObservation,
     ReplayToolCmdOutputObservation,
 )
 from openhands.events.observation.success import SuccessObservation
@@ -25,6 +26,7 @@ observations = (
     CmdOutputObservation,
     ReplayInternalCmdOutputObservation,
     ReplayToolCmdOutputObservation,
+    ReplayPhaseUpdateObservation,
     IPythonRunCellObservation,
     BrowserOutputObservation,
     FileReadObservation,

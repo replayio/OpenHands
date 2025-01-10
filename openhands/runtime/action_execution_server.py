@@ -53,6 +53,7 @@ from openhands.events.observation import (
 )
 from openhands.events.observation.replay import (
     ReplayCmdOutputObservationBase,
+    ReplayPhaseUpdateObservation,
 )
 from openhands.events.serialization import event_from_dict, event_to_dict
 from openhands.runtime.browser import browse
@@ -202,8 +203,9 @@ class ActionExecutor:
         return await self.replay_cli.run_action(action)
 
     async def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
-        return Observation(
-            content=f'ReplayPhaseUpdateAction changed to {ReplayPhaseUpdateAction.new_phase}'
+        return ReplayPhaseUpdateObservation(
+            new_phase=action.new_phase,
+            content=f'ReplayDebuggingPhase changed to {action.new_phase}',
         )
 
     async def run_ipython(self, action: IPythonRunCellAction) -> Observation:

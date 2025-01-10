@@ -88,7 +88,7 @@ RUN \
 # Clone replay and make sure the layer is not stale when HEAD changes.
 # For now we manually specify a revision as an argument to bust caches when building images.
 ARG REPLAYAPI_SHA
-ARG EXPECTED_REVISION=f51788c8c2e6f5df22c37edf892eb1905aede119
+ARG EXPECTED_REVISION=4c79dcae0e4e916c4bb83688e7484660d0bb5c76
 RUN \
     mkdir -p /replay && \
     git -C /replay clone https://github.com/replayio-public/replayapi.git && \

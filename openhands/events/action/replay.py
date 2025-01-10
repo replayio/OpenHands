@@ -66,9 +66,7 @@ class ReplayPhaseUpdateAction(Action):
     new_phase: ReplayDebuggingPhase
 
     thought: str = ''
-    blocking: bool = False
-    keep_prompt: bool = True
-    hidden: bool = False
+
     action: str = ActionType.REPLAY_UPDATE_PHASE
     runnable: ClassVar[bool] = True
     confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
