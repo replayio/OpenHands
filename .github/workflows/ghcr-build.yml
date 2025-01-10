@@ -208,6 +208,37 @@ jobs:
         run: pipx install poetry
       - name: Install Python dependencies using Poetry
         run: make install-python-dependencies
+      - name: Checkout replayapi & devtools
+        run: |
+          mkdir -p replay
+          git -C replay clone --depth=1 https://github.com/replayio-public/replayapi.git
+          git -C replay clone --depth=1 https://github.com/replayio/devtools.git
+          REPLAY_DIR="$(cd replay && pwd)"
+          echo "REPLAY_DIR=$REPLAY_DIR" >> $GITHUB_ENV
+      - name: Set up NodeJS for replay
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Cache replay yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./replay/replayapi/node_modules
+            ./replay/devtools/node_modules
+          key: ${{ runner.os }}-replay-yarn-${{ hashFiles('replay/*/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-replay-yarn-
+      - name: Install replay devtools yarn dependencies
+        run: |
+          cd $REPLAY_DIR/devtools
+          yarn
+      - name: Install replayapi yarn dependencies
+        run: |
+          cd $REPLAY_DIR/replayapi
+          export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+          corepack enable
+          yarn
+          yarn yalc-all
       - name: Create source distribution and Dockerfile
         run: poetry run python3 openhands/runtime/utils/runtime_build.py --base_image ${{ matrix.base_image.image }} --build_folder containers/runtime --force_rebuild
       - name: Build and push runtime image ${{ matrix.base_image.image }}

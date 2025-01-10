@@ -263,6 +263,16 @@ def prep_build_folder(
         ),
     )
 
+    # Copy the replay deps
+    shutil.copytree(
+        Path(os.environ['REPLAY_DIR'], 'devtools'),
+        Path(build_folder, 'replay', 'devtools'),
+    )
+    shutil.copytree(
+        Path(os.environ['REPLAY_DIR'], 'replayapi'),
+        Path(build_folder, 'replay', 'replayapi'),
+    )
+
     # Copy pyproject.toml and poetry.lock files
     for file in ['pyproject.toml', 'poetry.lock']:
         src = Path(openhands_source_dir, file)
