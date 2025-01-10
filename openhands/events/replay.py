@@ -139,7 +139,9 @@ def handle_replay_internal_observation(
             AnnotateResult, safe_parse_json(observation.content)
         )
 
+        # Determine what initial-analysis did:
         if result and 'metadata' in result:
+            # New workflow: initial-analysis provided the metadata to allow tool use.
             metadata, data = split_metadata(result)
             prefix = ''
             suffix = f'* This bug had a timetravel debugger recording. Use below `Initial Analysis` and the timetravel debugger `inspect-*` tools to find the bug. Once found, `submit-hypothesis`, so your analysis can be used to implement the solution.\n\n## Initial Analysis\n{json.dumps(data, indent=2)}'
@@ -150,6 +152,7 @@ def handle_replay_internal_observation(
             )
             return metadata
         elif result and result.get('annotatedRepo'):
+            # Old workflow: initial-analysis left hints in form of source code annotations.
             annotated_repo_path = result.get('annotatedRepo', '')
             comment_text = result.get('commentText', '')
             react_component_name = result.get('reactComponentName', '')

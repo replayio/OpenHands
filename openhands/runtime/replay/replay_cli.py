@@ -118,6 +118,6 @@ class ReplayCli:
                 exit_code=obs.exit_code,
                 hidden=obs.hidden,
                 interpreter_details=obs.interpreter_details,
-                # NOTE: content must always be str.
+                # We provide the analysis data as-is in a human-readable JSON format, to keep things concise.
                 content=json.dumps(result),
             )

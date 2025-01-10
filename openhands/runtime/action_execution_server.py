@@ -202,6 +202,7 @@ class ActionExecutor:
     ) -> ReplayCmdOutputObservationBase | ErrorObservation:
         return await self.replay_cli.run_action(action)
 
+    # NOTE: The runtime does not do anything during a phase update, but we still need this because OH wants all actions to be observed by all connected runtimes and produce an observation of a uniquely identifyable observation prop.
     async def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
         return ReplayPhaseUpdateObservation(
             new_phase=action.new_phase,
