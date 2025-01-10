@@ -73,7 +73,11 @@ const messageActions = {
   },
   [ActionType.RUN_REPLAY_INTERNAL]: (message: ActionMessage) => {
     if (message.args.command_name) {
-      store.dispatch(appendJupyterInput(`[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`));
+      store.dispatch(
+        appendJupyterInput(
+          `[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`,
+        ),
+      );
     }
   },
   [ActionType.RUN_REPLAY_TOOL]: (message: ActionMessage) => {
@@ -81,12 +85,20 @@ const messageActions = {
       store.dispatch(addAssistantMessage(message.args.thought));
     }
     if (message.args.command_name) {
-      store.dispatch(addAssistantMessage(`[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`));
+      store.dispatch(
+        addAssistantMessage(
+          `[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`,
+        ),
+      );
     }
   },
   [ActionType.REPLAY_UPDATE_PHASE]: (message: ActionMessage) => {
     if (message.args.command_name) {
-      store.dispatch(appendJupyterInput(`[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`));
+      store.dispatch(
+        appendJupyterInput(
+          `[REPLAY] ${message.args.command_name} ${JSON.stringify(message.args.command_args)}`,
+        ),
+      );
     }
   },
 };
