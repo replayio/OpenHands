@@ -1,9 +1,8 @@
 # Workflow that runs regression tests against our solved test bugs
 name: Run Replay Regression Tests
 
-# The jobs in this workflow are required, so they must run at all times
-# * Always run on "main"
-# * Always run on PRs
+# Wait until the Docker workflow has completed, since our regression tests depend
+# on the containers being published.
 on:
   push:
     branches:
@@ -12,19 +11,28 @@ on:
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
 concurrency:
-    group: ${{ github.workflow }}-${{ (github.head_ref && github.ref) || github.run_id }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ (github.head_ref && github.ref) || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-    check-for-regressions:
-        name: Check 10609
-        uses: actions/github-script@v7
-        if: always()
+  check-for-regressions:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # don't stop the job if a matrix entry fails
+      matrix:
+        repo: ["bench-devtools-10609"] # add more bench dirs here
+    steps:
+      - name: Check ${{ matrix.repo }} for regressions
+        if: always() # don't let other checks keep this from running
+        uses: convictional/trigger-workflow-and-wait@v1.6.5
         with:
-            script: |
-                github.rest.actions.createWorkflowDispatch({
-                    context.repo.owner,
-                    "bench-devtools-10609",
-                    "regress-check.yml",
-                    "main",
-                });
+          github_token: ${{ secrets.WORKFLOW_DISPATCH_TOKEN }}
+          owner: replayio-public
+          repo: ${{ matrix.repo }}
+          workflow_file_name: regress-check.yml
+          propagate_failure: true
+          trigger_workflow: true
+          client_payload: |
+            {
+              "openhands_sha": "${{ github.sha }}"
+            }
