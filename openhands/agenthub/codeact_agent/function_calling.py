@@ -56,8 +56,16 @@ ReplayInspectDataTool = ChatCompletionToolParam(
                     'type': 'string',
                     'description': 'The point at which to inspect the runtime. The first point comes from the `thisPoint` in the Initial analysis.',
                 },
+                'explanation': {
+                    'type': 'string',
+                    'description': 'Give a concise explanation as to why you take this investigative step.',
+                },
+                'explanation_source': {
+                    'type': 'string',
+                    'description': 'Explain which data you saw in the previous analysis results that informs this step.',
+                },
             },
-            'required': ['expression', 'point'],
+            'required': ['expression', 'point', 'explanation', 'explanation_source'],
         },
     ),
 )
@@ -129,6 +137,10 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
                             'oldCode': {'type': 'string'},
                             'location': {'type': 'string'},
                             'point': {'type': 'string'},
+                            # NOTE: Even though, we really want the `line` here, it will lead to much worse performance because the agent has a hard time computing correct line numbers from its point-based investigation.
+                            # Instead of requiring a line number, the final fix will be more involved, as explained in the issue.
+                            # see: https://linear.app/replay/issue/PRO-939/use-tools-data-flow-analysis-for-10608#comment-3b7ae176
+                            # 'line': {'type': 'number'},
                             'briefExplanation': {'type': 'string'},
                             'verificationProof': {'type': 'string'},
                         },
@@ -136,6 +148,7 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
                             'kind',
                             'location',
                             'briefExplanation',
+                            # 'line',
                             'verificationProof',
                         ],
                     },
@@ -145,6 +158,8 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
         },
     ),
 )
+
+REPLAY_TOOLS = ['inspect-data', 'inspect-point', 'submit-hypothesis']
 
 
 # ---------------------------------------------------------
@@ -587,18 +602,37 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
                 ) from e
             if tool_call.function.name == 'execute_bash':
                 action = CmdRunAction(**arguments)
-            elif tool_call.function.name == 'inspect-data':
-                action = ReplayToolCmdRunAction(
-                    command_name='inspect-data',
-                    command_args=arguments | {'recordingId': state.replay_recording_id},
+            elif tool_call.function.name in REPLAY_TOOLS:
+                logger.info(
+                    f'[REPLAY] TOOL_CALL {tool_call.function.name} - arguments: {json.dumps(arguments, indent=2)}'
                 )
-            elif tool_call.function.name == 'inspect-point':
-                action = ReplayToolCmdRunAction(
-                    command_name='inspect-point',
-                    command_args=arguments | {'recordingId': state.replay_recording_id},
-                )
-            elif tool_call.function.name == 'submit-hypothesis':
-                action = ReplayPhaseUpdateAction(new_phase=ReplayDebuggingPhase.Edit)
+                if tool_call.function.name == 'inspect-data':
+                    # Remove explanation props.
+                    arguments = {
+                        k: v for k, v in arguments.items() if 'explanation' not in k
+                    }
+                    action = ReplayToolCmdRunAction(
+                        command_name='inspect-data',
+                        command_args=arguments
+                        | {'recordingId': state.replay_recording_id},
+                    )
+                elif tool_call.function.name == 'inspect-point':
+                    # # TODO: 10608 experiment hackfix
+                    # if arguments['expression'] == 'wiredRules':
+                    #     raise FunctionCallValidationError(f'wiredRules is irrelevant to the problem. Try something else.')
+                    action = ReplayToolCmdRunAction(
+                        command_name='inspect-point',
+                        command_args=arguments
+                        | {'recordingId': state.replay_recording_id},
+                    )
+                elif tool_call.function.name == 'submit-hypothesis':
+                    action = ReplayPhaseUpdateAction(
+                        new_phase=ReplayDebuggingPhase.Edit
+                    )
+                else:
+                    raise ValueError(
+                        f'Unknown Replay tool. Make sure to add them all to REPLAY_TOOLS: {tool_call.function.name}'
+                    )
             elif tool_call.function.name == 'execute_ipython_cell':
                 action = IPythonRunCellAction(**arguments)
             elif tool_call.function.name == 'delegate_to_browsing_agent':

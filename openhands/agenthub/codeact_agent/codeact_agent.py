@@ -37,8 +37,8 @@ from openhands.events.observation import (
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.observation import Observation
 from openhands.events.observation.replay import (
-    ReplayCmdOutputObservationBase,
     ReplayPhaseUpdateObservation,
+    ReplayToolCmdOutputObservation,
 )
 from openhands.events.replay import replay_enhance_action
 from openhands.events.serialization.event import truncate_content
@@ -254,7 +254,7 @@ class CodeActAgent(Agent):
                 )
             text += f'\n[Command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
-        elif isinstance(obs, ReplayCmdOutputObservationBase):
+        elif isinstance(obs, ReplayToolCmdOutputObservation):
             # if it doesn't have tool call metadata, it was triggered by a user action
             if obs.tool_call_metadata is None:
                 text = truncate_content(
@@ -262,10 +262,7 @@ class CodeActAgent(Agent):
                     max_message_chars,
                 )
             else:
-                text = truncate_content(
-                    obs.content + obs.interpreter_details, max_message_chars
-                )
-            text += f'\n[Replay command finished with exit code {obs.exit_code}]'
+                text = obs.content
             message = Message(role='user', content=[TextContent(text=text)])
         elif isinstance(obs, ReplayPhaseUpdateObservation):
             # NOTE: The phase change itself is handled in AgentController.
@@ -394,6 +391,7 @@ class CodeActAgent(Agent):
         params['tools'] = self.tools
         if self.mock_function_calling:
             params['mock_function_calling'] = True
+        # logger.debug(f'#######\nCodeActAgent.step: messages:\n{json.dumps(params)}\n\n#######\n')
         response = self.llm.completion(**params)
         actions = codeact_function_calling.response_to_actions(response, state)
         for action in actions:

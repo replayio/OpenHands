@@ -144,7 +144,7 @@ def handle_replay_internal_observation(
             # New workflow: initial-analysis provided the metadata to allow tool use.
             metadata, data = split_metadata(result)
             prefix = ''
-            suffix = f'* This bug had a timetravel debugger recording. Use below `Initial Analysis` and the timetravel debugger `inspect-*` tools to find the bug. Once found, `submit-hypothesis`, so your analysis can be used to implement the solution.\n\n## Initial Analysis\n{json.dumps(data, indent=2)}'
+            suffix = f'* This bug had a timetravel debugger recording.\n* Use below `Initial Analysis` and the timetravel debugger `inspect-*` tools to find the bug.\n* Once found, `submit-hypothesis`, so your analysis can be used to implement the solution.\n\n## Initial Analysis\n{json.dumps(data, indent=2)}'
             enhance_prompt(
                 user_message,
                 prefix,
