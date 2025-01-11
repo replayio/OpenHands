@@ -4,9 +4,6 @@ from openhands.events.observation.commands import (
     CmdOutputObservation,
     IPythonRunCellObservation,
 )
-from openhands.events.observation.replay import (
-    ReplayCmdOutputObservation,
-)
 from openhands.events.observation.delegate import AgentDelegateObservation
 from openhands.events.observation.empty import NullObservation
 from openhands.events.observation.error import ErrorObservation
@@ -17,13 +14,16 @@ from openhands.events.observation.files import (
 )
 from openhands.events.observation.observation import Observation
 from openhands.events.observation.reject import UserRejectObservation
+from openhands.events.observation.replay import (
+    ReplayInternalCmdOutputObservation,
+)
 from openhands.events.observation.success import SuccessObservation
 
 __all__ = [
     'Observation',
     'NullObservation',
     'CmdOutputObservation',
-    'ReplayCmdOutputObservation',
+    'ReplayInternalCmdOutputObservation',
     'IPythonRunCellObservation',
     'BrowserOutputObservation',
     'FileReadObservation',

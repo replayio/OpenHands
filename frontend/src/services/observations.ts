@@ -21,8 +21,10 @@ export function handleObservationMessage(message: ObservationMessage) {
       store.dispatch(appendOutput(content));
       break;
     }
-    case ObservationType.RUN_REPLAY:
-      store.dispatch(appendOutput(message.content));
+    case ObservationType.RUN_REPLAY_INTERNAL:
+    case ObservationType.RUN_REPLAY_TOOL:
+    case ObservationType.REPLAY_UPDATE_PHASE:
+      store.dispatch(appendOutput(`[REPLAY] ${message.content}`));
       break;
     case ObservationType.RUN_IPYTHON:
       // FIXME: render this as markdown

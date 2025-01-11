@@ -10,6 +10,7 @@ from openhands.controller.state.state import State
 from openhands.core.config import AgentConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import ImageContent, Message, TextContent
+from openhands.core.schema.replay import ReplayDebuggingPhase
 from openhands.events.action import (
     Action,
     AgentDelegateAction,
@@ -19,7 +20,11 @@ from openhands.events.action import (
     FileEditAction,
     IPythonRunCellAction,
     MessageAction,
-    ReplayCmdRunAction,
+)
+from openhands.events.action.replay import (
+    ReplayCmdRunActionBase,
+    ReplayPhaseUpdateAction,
+    ReplayToolCmdRunAction,
 )
 from openhands.events.observation import (
     AgentDelegateObservation,
@@ -27,11 +32,14 @@ from openhands.events.observation import (
     CmdOutputObservation,
     FileEditObservation,
     IPythonRunCellObservation,
-    ReplayCmdOutputObservation,
     UserRejectObservation,
 )
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.observation import Observation
+from openhands.events.observation.replay import (
+    ReplayPhaseUpdateObservation,
+    ReplayToolCmdOutputObservation,
+)
 from openhands.events.replay import replay_enhance_action
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
@@ -93,15 +101,10 @@ class CodeActAgent(Agent):
             )
             self.mock_function_calling = True
 
-        # Function calling mode
-        self.tools = codeact_function_calling.get_tools(
-            codeact_enable_browsing=self.config.codeact_enable_browsing,
-            codeact_enable_jupyter=self.config.codeact_enable_jupyter,
-            codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
-        )
-        logger.debug(
-            f'TOOLS loaded for CodeActAgent: {json.dumps(self.tools, indent=2)}'
-        )
+        # We're in normal mode by default (even if replay is not enabled).
+        # This will initialize the set of tools the agent has access to.
+        self.replay_phase_changed(ReplayDebuggingPhase.Normal)
+
         self.prompt_manager = PromptManager(
             microagent_dir=os.path.join(os.path.dirname(__file__), 'micro')
             if self.config.use_microagents
@@ -154,6 +157,9 @@ class CodeActAgent(Agent):
                 IPythonRunCellAction,
                 FileEditAction,
                 BrowseInteractiveAction,
+                # Replay tools
+                ReplayToolCmdRunAction,
+                ReplayPhaseUpdateAction,
             ),
         ) or (
             isinstance(action, (AgentFinishAction, CmdRunAction))
@@ -199,16 +205,8 @@ class CodeActAgent(Agent):
                     content=content,
                 )
             ]
-        elif isinstance(action, ReplayCmdRunAction) and action.source == 'user':
-            content = [
-                TextContent(text=f'User executed replay command:\n{action.command}')
-            ]
-            return [
-                Message(
-                    role='user',
-                    content=content,
-                )
-            ]
+        elif isinstance(action, ReplayCmdRunActionBase) and action.source == 'user':
+            raise Exception('NYI: ReplayCmdRunAction triggered by user')
         return []
 
     def get_observation_message(
@@ -256,7 +254,7 @@ class CodeActAgent(Agent):
                 )
             text += f'\n[Command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
-        elif isinstance(obs, ReplayCmdOutputObservation):
+        elif isinstance(obs, ReplayToolCmdOutputObservation):
             # if it doesn't have tool call metadata, it was triggered by a user action
             if obs.tool_call_metadata is None:
                 text = truncate_content(
@@ -264,11 +262,19 @@ class CodeActAgent(Agent):
                     max_message_chars,
                 )
             else:
-                text = truncate_content(
-                    obs.content + obs.interpreter_details, max_message_chars
-                )
-            text += f'\n[Replay command finished with exit code {obs.exit_code}]'
+                text = obs.content
             message = Message(role='user', content=[TextContent(text=text)])
+        elif isinstance(obs, ReplayPhaseUpdateObservation):
+            # NOTE: The phase change itself is handled in AgentController.
+            new_phase = obs.new_phase
+            if new_phase == ReplayDebuggingPhase.Edit:
+                # Tell the agent to stop analyzing and start editing:
+                text = "You have concluded the analysis. Review, then implement the hypothesized changes using the edit tools available to you. The code is available in the workspace. Don't stop. Fix the bug."
+                message = Message(role='user', content=[TextContent(text=text)])
+            else:
+                raise NotImplementedError(
+                    f'Unhandled ReplayPhaseUpdateAction: {new_phase}'
+                )
         elif isinstance(obs, IPythonRunCellObservation):
             text = obs.content
             # replace base64 images with a placeholder
@@ -328,6 +334,23 @@ class CodeActAgent(Agent):
         """Resets the CodeAct Agent."""
         super().reset()
 
+    def replay_phase_changed(self, phase: ReplayDebuggingPhase) -> None:
+        """Called whenenever the phase of the replay debugging process changes.
+
+        We currently use this to give the agent access to different tools for the
+        different phases.
+        """
+        self.tools = codeact_function_calling.get_tools(
+            codeact_enable_browsing=self.config.codeact_enable_browsing,
+            codeact_enable_jupyter=self.config.codeact_enable_jupyter,
+            codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
+            codeact_enable_replay=self.config.codeact_enable_replay,
+            codeact_replay_phase=phase,
+        )
+        logger.debug(
+            f'[REPLAY] CodeActAgent.replay_phase_changed({phase}). New tools: {json.dumps(self.tools, indent=2)}'
+        )
+
     def step(self, state: State) -> Action:
         """Performs one step using the CodeAct Agent.
         This includes gathering info on previous steps and prompting the model to make a command to execute.
@@ -368,8 +391,9 @@ class CodeActAgent(Agent):
         params['tools'] = self.tools
         if self.mock_function_calling:
             params['mock_function_calling'] = True
+        # logger.debug(f'#######\nCodeActAgent.step: messages:\n{json.dumps(params)}\n\n#######\n')
         response = self.llm.completion(**params)
-        actions = codeact_function_calling.response_to_actions(response)
+        actions = codeact_function_calling.response_to_actions(response, state)
         for action in actions:
             self.pending_actions.append(action)
         return self.pending_actions.popleft()

@@ -11,8 +11,14 @@ enum ObservationType {
   // The output of an IPython command
   RUN_IPYTHON = "run_ipython",
 
-  // The output of a replay command
-  RUN_REPLAY = "run_replay",
+  // The output of an internal replay command
+  RUN_REPLAY_INTERNAL = "run_replay_internal",
+
+  // The output of a tool replay command
+  RUN_REPLAY_TOOL = "run_replay_tool",
+
+  // The output of a tool replay command
+  REPLAY_UPDATE_PHASE = "replay_update_phase",
 
   // A message from the user
   CHAT = "chat",

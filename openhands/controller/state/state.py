@@ -100,6 +100,8 @@ class State:
     # evaluation tasks to store extra data needed to track the progress/state of the task.
     extra_data: dict[str, Any] = field(default_factory=dict)
     last_error: str = ''
+
+    replay_recording_id: str = ''
     replay_phase: ReplayDebuggingPhase = ReplayDebuggingPhase.Normal
 
     def save_to_session(self, sid: str, file_store: FileStore):

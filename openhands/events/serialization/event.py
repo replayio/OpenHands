@@ -84,7 +84,7 @@ def event_to_dict(event: 'Event') -> dict:
         d['content'] = props.pop('content', '')
         d['extras'] = props
     else:
-        raise ValueError('Event must be either action or observation')
+        raise ValueError(f'Event must be either action or observation: {repr(event)}')
     return d
 
 

@@ -6,8 +6,8 @@ from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
 from openhands.events.action.action import Action
 from openhands.events.action.message import MessageAction
-from openhands.events.action.replay import ReplayCmdRunAction
-from openhands.events.observation.replay import ReplayCmdOutputObservation
+from openhands.events.action.replay import ReplayInternalCmdRunAction
+from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
 
 
 def scan_recording_id(issue: str) -> str | None:
@@ -26,21 +26,26 @@ def scan_recording_id(issue: str) -> str | None:
 # Produce the command string for the `annotate-execution-points` command.
 def command_annotate_execution_points(
     thought: str, is_workspace_repo: bool
-) -> ReplayCmdRunAction:
-    # NOTE: For the resolver, the workdir path is the repo path.
-    #       In that case, we should not append the repo name to the path.
-    is_repo_flag = ' -i' if is_workspace_repo else ''
-    # If the workspace is the repo, it should already have been hard reset.
-    force_flag = ' -f' if not is_workspace_repo else ''
-    command = f'"annotate-execution-points" -w "$(pwd)"{is_repo_flag}{force_flag}'
-    action = ReplayCmdRunAction(
+) -> ReplayInternalCmdRunAction:
+    command_input: dict[str, Any] = dict()
+    if is_workspace_repo:
+        # NOTE: In the resolver workflow, the workdir path is equal to the repo path:
+        #    1. We should not append the repo name to the path.
+        #    2. The resolver also already hard-reset the repo, so forceDelete is not necessary.
+        command_input['isWorkspaceRepoPath'] = True
+        command_input['forceDelete'] = False
+    else:
+        command_input['isWorkspaceRepoPath'] = False
+        command_input['forceDelete'] = True
+    command_input['prompt'] = thought
+
+    action = ReplayInternalCmdRunAction(
+        command_name='initial-analysis',
+        command_args=command_input,
+        in_workspace_dir=is_workspace_repo,
         thought=thought,
-        command=command,
-        # NOTE: The command will be followed by a file containing the thought.
-        file_arguments=[thought],
         keep_prompt=False,
         # hidden=True, # The hidden implementation causes problems, so we added replay stuff to `filter_out` instead.
-        in_workspace_dir=True,
     )
     return action
 
@@ -51,12 +56,12 @@ def replay_enhance_action(state: State, is_workspace_repo: bool) -> Action | Non
         # 1. Get current user prompt.
         latest_user_message = state.get_last_user_message()
         if latest_user_message:
-            logger.info(f'[REPLAY] latest_user_message id is {latest_user_message.id}')
+            logger.debug(f'[REPLAY] latest_user_message id is {latest_user_message.id}')
             # 2. Check if it has a recordingId.
             recording_id = scan_recording_id(latest_user_message.content)
             if recording_id:
                 # 3. Analyze recording and start the enhancement action.
-                logger.info(
+                logger.debug(
                     f'[REPLAY] Enhancing prompt for Replay recording "{recording_id}"...'
                 )
                 state.extra_data['replay_enhance_prompt_id'] = latest_user_message.id
@@ -72,34 +77,53 @@ class AnnotatedLocation(TypedDict, total=False):
     line: int
 
 
+class AnalysisToolMetadata(TypedDict, total=False):
+    recordingId: str
+
+
 class AnnotateResult(TypedDict, total=False):
-    status: str
     point: str
     commentText: str | None
-    annotatedRepo: str
-    annotatedLocations: list[AnnotatedLocation]
+    annotatedRepo: str | None
+    annotatedLocations: list[AnnotatedLocation] | None
     pointLocation: str | None
+    metadata: AnalysisToolMetadata | None
 
 
-class ReplayCommandResult(TypedDict, total=False):
-    # TODO: Use generics instead of `Any`. We currently cannot that because it raised an error saying that generics are not yet supported. Not sure why.
-    result: Any | None
-    error: str | None
-    errorDetails: str | None
-
-
-def safe_parse_json(text: str):
+def safe_parse_json(text: str) -> dict[str, Any] | None:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         return None
 
 
-def handle_replay_enhance_observation(
-    state: State, observation: ReplayCmdOutputObservation
-) -> bool:
+def split_metadata(result):
+    if 'metadata' not in result:
+        return {}, result
+    metadata = result['metadata']
+    data = dict(result)
+    del data['metadata']
+    return metadata, data
+
+
+def enhance_prompt(user_message: MessageAction, prefix: str, suffix: str | None = None):
+    if prefix != '':
+        user_message.content = f'{prefix}\n\n{user_message.content}'
+    if suffix is not None:
+        user_message.content = f'{user_message.content}\n\n{suffix}'
+    logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
+
+
+def handle_replay_internal_observation(
+    state: State, observation: ReplayInternalCmdOutputObservation
+) -> AnalysisToolMetadata | None:
+    """
+    Enhance the user prompt with the results of the replay analysis.
+    Returns the metadata needed for the agent to switch to analysis tools.
+    """
     enhance_action_id = state.extra_data.get('replay_enhance_prompt_id')
-    if enhance_action_id is not None:
+    enhance_observed = state.extra_data.get('replay_enhance_observed', False)
+    if enhance_action_id is not None and not enhance_observed:
         user_message: MessageAction | None = next(
             (
                 m
@@ -109,11 +133,26 @@ def handle_replay_enhance_observation(
             None,
         )
         assert user_message
+        state.extra_data['replay_enhance_observed'] = True
 
-        output: ReplayCommandResult = safe_parse_json(observation.content)
-        if output and output.get('result'):
-            original_prompt = user_message.content
-            result: AnnotateResult = cast(AnnotateResult, output.get('result', {}))
+        result: AnnotateResult = cast(
+            AnnotateResult, safe_parse_json(observation.content)
+        )
+
+        # Determine what initial-analysis did:
+        if result and 'metadata' in result:
+            # New workflow: initial-analysis provided the metadata to allow tool use.
+            metadata, data = split_metadata(result)
+            prefix = ''
+            suffix = f'* This bug had a timetravel debugger recording.\n* Use below `Initial Analysis` and the timetravel debugger `inspect-*` tools to find the bug.\n* Once found, `submit-hypothesis`, so your analysis can be used to implement the solution.\n\n## Initial Analysis\n{json.dumps(data, indent=2)}'
+            enhance_prompt(
+                user_message,
+                prefix,
+                suffix,
+            )
+            return metadata
+        elif result and result.get('annotatedRepo'):
+            # Old workflow: initial-analysis left hints in form of source code annotations.
             annotated_repo_path = result.get('annotatedRepo', '')
             comment_text = result.get('commentText', '')
             react_component_name = result.get('reactComponentName', '')
@@ -124,30 +163,25 @@ def handle_replay_enhance_observation(
             # TODO: Move this to a prompt template file.
             if comment_text:
                 if react_component_name:
-                    enhancement = f'There is a change needed to the {react_component_name} component.\n'
+                    prefix = f'There is a change needed to the {react_component_name} component.\n'
                 else:
-                    enhancement = (
-                        f'There is a change needed in {annotated_repo_path}:\n'
-                    )
-                enhancement += f'{comment_text}\n\n'
+                    prefix = f'There is a change needed in {annotated_repo_path}:\n'
+                prefix += f'{comment_text}\n\n'
             elif console_error:
-                enhancement = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
-                enhancement += f'{console_error}\n\n'
+                prefix = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
+                prefix += f'{console_error}\n\n'
 
-            enhancement += '<IMPORTANT>\n'
-            enhancement += 'Information about a reproduction of the problem is available in source comments.\n'
-            enhancement += 'You must search for these comments and use them to get a better understanding of the problem.\n'
-            enhancement += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
-            enhancement += '</IMPORTANT>\n'
+            prefix += '<IMPORTANT>\n'
+            prefix += 'Information about a reproduction of the problem is available in source comments.\n'
+            prefix += 'You must search for these comments and use them to get a better understanding of the problem.\n'
+            prefix += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
+            prefix += '</IMPORTANT>\n'
 
-            # Enhance:
-            user_message.content = f'{enhancement}\n\n{original_prompt}'
-            # user_message.content = enhancement
-            logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
-            return True
+            enhance_prompt(user_message, prefix)
+            return None
         else:
             logger.warning(
-                f'DDBG Replay command did not return a result. Instead it returned: {str(output)}'
+                f'[REPLAY] Replay observation cannot be interpreted. Observed content: {str(observation.content)}'
             )
 
-    return False
+    return None

@@ -24,8 +24,16 @@ class ObservationTypeSchema(BaseModel):
     """Runs a IPython cell.
     """
 
-    RUN_REPLAY: str = Field(default='run_replay')
-    """Runs a Replay command.
+    RUN_REPLAY_INTERNAL: str = Field(default='run_replay_internal')
+    """Runs an internal Replay command.
+    """
+
+    RUN_REPLAY_TOOL: str = Field(default='run_replay_tool')
+    """Runs a Replay tool command.
+    """
+
+    REPLAY_UPDATE_PHASE: str = Field(default='replay_update_phase')
+    """Replay phase change.
     """
 
     CHAT: str = Field(default='chat')

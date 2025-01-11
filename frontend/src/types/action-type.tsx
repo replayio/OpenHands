@@ -17,8 +17,14 @@ enum ActionType {
   // Runs a IPython command.
   RUN_IPYTHON = "run_ipython",
 
-  // Runs a Replay command.
-  RUN_REPLAY = "run_replay",
+  // Runs an internal Replay command.
+  RUN_REPLAY_INTERNAL = "run_replay_internal",
+
+  // Runs a Replay tool command.
+  RUN_REPLAY_TOOL = "run_replay_tool",
+
+  // Updates the replay analysis phase.
+  REPLAY_UPDATE_PHASE = "replay_update_phase",
 
   // Opens a web page.
   BROWSE = "browse",

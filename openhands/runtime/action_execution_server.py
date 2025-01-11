@@ -36,7 +36,12 @@ from openhands.events.action import (
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
-    ReplayCmdRunAction,
+)
+from openhands.events.action.replay import (
+    ReplayCmdRunActionBase,
+    ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
+    ReplayToolCmdRunAction,
 )
 from openhands.events.observation import (
     CmdOutputObservation,
@@ -45,7 +50,10 @@ from openhands.events.observation import (
     FileWriteObservation,
     IPythonRunCellObservation,
     Observation,
-    ReplayCmdOutputObservation,
+)
+from openhands.events.observation.replay import (
+    ReplayCmdOutputObservationBase,
+    ReplayPhaseUpdateObservation,
 )
 from openhands.events.serialization import event_from_dict, event_to_dict
 from openhands.runtime.browser import browse
@@ -179,10 +187,27 @@ class ActionExecutor:
         obs = await call_sync_from_async(self.bash_session.run, action)
         return obs
 
-    async def run_replay(
-        self, action: ReplayCmdRunAction
-    ) -> ReplayCmdOutputObservation | ErrorObservation:
+    async def run_replay_internal(
+        self, action: ReplayInternalCmdRunAction
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
+        return await self._run_replay(action)
+
+    async def run_replay_tool(
+        self, action: ReplayToolCmdRunAction
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
+        return await self._run_replay(action)
+
+    async def _run_replay(
+        self, action: ReplayCmdRunActionBase
+    ) -> ReplayCmdOutputObservationBase | ErrorObservation:
         return await self.replay_cli.run_action(action)
+
+    # NOTE: The runtime does not do anything during a phase update, but we still need this because OH wants all actions to be observed by all connected runtimes and produce an observation of a uniquely identifyable observation prop.
+    async def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
+        return ReplayPhaseUpdateObservation(
+            new_phase=action.new_phase,
+            content=f'ReplayDebuggingPhase changed to {action.new_phase}',
+        )
 
     async def run_ipython(self, action: IPythonRunCellAction) -> Observation:
         if 'jupyter' in self.plugins:
