@@ -284,5 +284,6 @@ if __name__ == '__main__':
             config=config,
             initial_user_action=initial_user_action,
             sid=sid,
+            exit_on_message=True,
         )
     )
