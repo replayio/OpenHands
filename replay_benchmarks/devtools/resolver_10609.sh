@@ -1,3 +1,4 @@
+# Copyright 2020-2025 Record Replay Inc.
 set -e
 
 OH_ROOT="$(dirname "$0")/.."
