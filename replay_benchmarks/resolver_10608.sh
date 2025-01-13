@@ -1,21 +1,22 @@
 set -e
 
-OH_DIR="$(dirname "$0")/.."
+OH_ROOT="$(dirname "$0")/.."
 if [[ -z "$TMP_DIR" ]]; then
     TMP_DIR="/tmp"
 fi
-
-export DEBUG=1
-export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
 REPO=replayio-public/bench-devtools-10608
 ISSUE_NUMBER=2 # https://github.com/replayio-public/bench-devtools-10608/issues/2
 ISSUE_TYPE=issue
 COMMENT_ID=""
-LOG_FILE="$TMP_DIR/tmp.log"
 
+# Resolver paths.
 OH_OUTPUT_DIR="$TMP_DIR/resolver-output"
 OH_OUTPUT_FILE="$OH_OUTPUT_DIR/output.jsonl"
+WORKSPACE_ROOT="$OH_OUTPUT_DIR/workspace/${ISSUE_TYPE}_${ISSUE_NUMBER}"
 
+# Config overrides + sanity checks.
+export DEBUG=1
+export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
 if [[ -z "$LLM_API_KEY" ]]; then
     if [[ -z "$ANTHROPIC_API_KEY" ]]; then
         echo "LLM_API_KEY or ANTHROPIC_API_KEY environment variable must be set."
@@ -24,15 +25,14 @@ if [[ -z "$LLM_API_KEY" ]]; then
     export LLM_API_KEY=$ANTHROPIC_API_KEY
 fi
 
-TARGET_REPO="$OH_OUTPUT_DIR/workspace/${ISSUE_TYPE}_${ISSUE_NUMBER}"
-
-rm -f $OH_OUTPUT_FILE
-
-echo "Target repo at: $TARGET_REPO"
+# Logging.
+LOG_FILE="$TMP_DIR/tmp.log"
+echo "WORKSPACE_ROOT = $WORKSPACE_ROOT"
 echo "Logging to \"$LOG_FILE\"..."
 
-cd "$OH_DIR"
-
+# GO.
+rm -f $OH_OUTPUT_FILE
+cd "$OH_ROOT"
 python -m openhands.resolver.resolve_issue \
     --repo $REPO \
     --issue-number $ISSUE_NUMBER \
