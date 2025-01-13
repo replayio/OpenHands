@@ -617,8 +617,7 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
                         | {'recordingId': state.replay_recording_id},
                     )
                 elif tool_call.function.name == 'inspect-point':
-                    # # TODO: 10608 experiment hackfix
-                    # if arguments['expression'] == 'wiredRules':
+                    # if arguments['expression'] == 'wiredRules':   # hackfix for 10608 experiment
                     #     raise FunctionCallValidationError(f'wiredRules is irrelevant to the problem. Try something else.')
                     action = ReplayToolCmdRunAction(
                         command_name='inspect-point',
