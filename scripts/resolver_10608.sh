@@ -7,10 +7,10 @@ fi
 
 export DEBUG=1
 export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
-REPO=replayio-public/bench-devtools-10609
-ISSUE_NUMBER=15
+REPO=replayio-public/bench-devtools-10608
+ISSUE_NUMBER=2 # https://github.com/replayio-public/bench-devtools-10608/issues/2
 ISSUE_TYPE=issue
-COMMENT_ID=2526444494
+COMMENT_ID=""
 LOG_FILE="$TMP_DIR/tmp.log"
 
 OH_OUTPUT_DIR="$TMP_DIR/resolver-output"
@@ -38,6 +38,6 @@ python -m openhands.resolver.resolve_issue \
     --issue-number $ISSUE_NUMBER \
     --issue-type $ISSUE_TYPE \
     --max-iterations 50 \
-    --comment-id $COMMENT_ID \
+    ${COMMENT_ID:+--comment-id $COMMENT_ID} \
     --output-dir "$OH_OUTPUT_DIR" \
     > "$LOG_FILE" 2>&1

@@ -11,9 +11,6 @@ from openhands.events.action.commands import (
     CmdRunAction,
     IPythonRunCellAction,
 )
-from openhands.events.action.replay import (
-    ReplayCmdRunAction,
-)
 from openhands.events.action.empty import NullAction
 from openhands.events.action.files import (
     FileEditAction,
@@ -21,12 +18,19 @@ from openhands.events.action.files import (
     FileWriteAction,
 )
 from openhands.events.action.message import MessageAction
+from openhands.events.action.replay import (
+    ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
+    ReplayToolCmdRunAction,
+)
 from openhands.events.action.tasks import AddTaskAction, ModifyTaskAction
 
 actions = (
     NullAction,
     CmdRunAction,
-    ReplayCmdRunAction,
+    ReplayInternalCmdRunAction,
+    ReplayToolCmdRunAction,
+    ReplayPhaseUpdateAction,
     IPythonRunCellAction,
     BrowseURLAction,
     BrowseInteractiveAction,

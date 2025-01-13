@@ -26,9 +26,13 @@ from openhands.events.action import (
     FileReadAction,
     FileWriteAction,
     IPythonRunCellAction,
-    ReplayCmdRunAction,
 )
 from openhands.events.action.action import Action
+from openhands.events.action.replay import (
+    ReplayInternalCmdRunAction,
+    ReplayPhaseUpdateAction,
+    ReplayToolCmdRunAction,
+)
 from openhands.events.observation import (
     ErrorObservation,
     NullObservation,
@@ -570,7 +574,13 @@ class EventStreamRuntime(Runtime):
     def run(self, action: CmdRunAction) -> Observation:
         return self.run_action(action)
 
-    def run_replay(self, action: ReplayCmdRunAction) -> Observation:
+    def run_replay_internal(self, action: ReplayInternalCmdRunAction) -> Observation:
+        return self.run_action(action)
+
+    def run_replay_tool(self, action: ReplayToolCmdRunAction) -> Observation:
+        return self.run_action(action)
+
+    def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
         return self.run_action(action)
 
     def run_ipython(self, action: IPythonRunCellAction) -> Observation:

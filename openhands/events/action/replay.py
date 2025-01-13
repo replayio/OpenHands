@@ -1,7 +1,9 @@
+import json
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from openhands.core.schema import ActionType
+from openhands.core.schema.replay import ReplayDebuggingPhase
 from openhands.events.action.action import (
     Action,
     ActionConfirmationStatus,
@@ -9,10 +11,14 @@ from openhands.events.action.action import (
 )
 
 
+# NOTE: We need the same class twice because a lot of the agent logic is based on isinstance checks.
 @dataclass
-class ReplayCmdRunAction(Action):
-    # Command args to be passed to @replay/cli.
-    command: str
+class ReplayCmdRunActionBase(Action):
+    # Name of the command in @replayapi/cli.
+    command_name: str
+
+    # Args to be passed to the cli command.
+    command_args: dict[str, Any] | None = None
 
     # The thought/prompt message that triggered this action.
     thought: str = ''
@@ -20,17 +26,12 @@ class ReplayCmdRunAction(Action):
     blocking: bool = True
     keep_prompt: bool = False
     hidden: bool = False
-    action: str = ActionType.RUN_REPLAY
     runnable: ClassVar[bool] = True
     confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
     security_risk: ActionSecurityRisk | None = None
 
     # Whether to execute the command from the workspace directory, independent of CWD.
-    in_workspace_dir: bool = True
-
-    # List of strings that need to be written to text files, and then provided as argument to command.
-    # NOTE: Sometimes this is necessary to avoid bash encoding pitfalls.
-    file_arguments: list[str] | None = None
+    in_workspace_dir: bool = False
 
     # Other Replay fields.
     recording_id: str = ''
@@ -38,11 +39,43 @@ class ReplayCmdRunAction(Action):
 
     @property
     def message(self) -> str:
-        return f'Running replay command: {self.command}'
+        return f'[REPLAY] {json.dumps({"command": self.command_name, "args": self.command_args})}'
 
     def __str__(self) -> str:
-        ret = f'**ReplayCmdRunAction (source={self.source})**\n'
+        ret = f'**{self.__class__.__name__} (source={self.source})**\n'
         if self.thought:
             ret += f'THOUGHT: {self.thought}\n'
-        ret += f'COMMAND:\n{self.command}'
+        ret += f'{self.message}'
+        return ret
+
+
+# The pure "command run actions" are used internally and should be hidden from the agent.
+@dataclass
+class ReplayInternalCmdRunAction(ReplayCmdRunActionBase):
+    action: str = ActionType.RUN_REPLAY_INTERNAL
+
+
+# The tool actions should be visible to the agent.
+@dataclass
+class ReplayToolCmdRunAction(ReplayCmdRunActionBase):
+    action: str = ActionType.RUN_REPLAY_TOOL
+
+
+@dataclass
+class ReplayPhaseUpdateAction(Action):
+    new_phase: ReplayDebuggingPhase
+
+    thought: str = ''
+
+    action: str = ActionType.REPLAY_UPDATE_PHASE
+    runnable: ClassVar[bool] = True
+    confirmation_state: ActionConfirmationStatus = ActionConfirmationStatus.CONFIRMED
+    security_risk: ActionSecurityRisk | None = None
+
+    @property
+    def message(self) -> str:
+        return f'{self.__class__.__name__}: {self.new_phase}'
+
+    def __str__(self) -> str:
+        ret = f'{self.message}'
         return ret
