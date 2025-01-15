@@ -95,13 +95,76 @@ ReplayInspectPointTool = ChatCompletionToolParam(
 
 # ---------------------------------------------------------
 # Tool: SubmitHypothesis
+# TODO: Divide this into multiple steps -
+#   1. The first submission must be as simple as possible to take little computational effort from the analysis steps.
+#   2. The second submission, after analysis has already concluded, must be as complete as possible.
 # ---------------------------------------------------------
+# _REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION = """
+# Your investigation has yielded a complete thin slice from symptom to root cause,
+# enough proof to let the `CodeEdit` agent take over to fix the bug.
+# DO NOT GUESS. You must provide exact code in the exact right location to fix this bug,
+# based on evidence you have gathered.
+# """
+
+# ReplaySubmitHypothesisTool = ChatCompletionToolParam(
+#     type='function',
+#     function=ChatCompletionToolParamFunctionChunk(
+#         name='submit-hypothesis',
+#         description=_REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION.strip(),
+#         parameters={
+#             'type': 'object',
+#             'properties': {
+#                 'rootCauseHypothesis': {'type': 'string'},
+#                 'thinSlice': {
+#                     'type': 'array',
+#                     'items': {
+#                         'type': 'object',
+#                         'properties': {
+#                             'point': {'type': 'string'},
+#                             'code': {'type': 'string'},
+#                             'role': {'type': 'string'},
+#                         },
+#                         'required': ['point', 'code', 'role'],
+#                     },
+#                 },
+#                 'modifications': {
+#                     'type': 'array',
+#                     'items': {
+#                         'type': 'object',
+#                         'properties': {
+#                             'kind': {
+#                                 'type': 'string',
+#                                 'enum': ['add', 'remove', 'modify'],
+#                             },
+#                             'newCode': {'type': 'string'},
+#                             'oldCode': {'type': 'string'},
+#                             'location': {'type': 'string'},
+#                             'point': {'type': 'string'},
+#                             # NOTE: Even though, we really want the `line` here, it will lead to much worse performance because the agent has a hard time computing correct line numbers from its point-based investigation.
+#                             # Instead of requiring a line number, the final fix will be more involved, as explained in the issue.
+#                             # see: https://linear.app/replay/issue/PRO-939/use-tools-data-flow-analysis-for-10608#comment-3b7ae176
+#                             # 'line': {'type': 'number'},
+#                             'briefExplanation': {'type': 'string'},
+#                             'verificationProof': {'type': 'string'},
+#                         },
+#                         'required': [
+#                             'kind',
+#                             'location',
+#                             'briefExplanation',
+#                             # 'line',
+#                             'verificationProof',
+#                         ],
+#                     },
+#                 },
+#             },
+#             'required': ['rootCauseHypothesis', 'thinSlice', 'modifications'],
+#         },
+#     ),
+# )
 _REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION = """
-Your investigation has yielded a complete thin slice from symptom to root cause,
-enough proof to let the `CodeEdit` agent take over to fix the bug.
-DO NOT GUESS. You must provide exact code in the exact right location to fix this bug,
-based on evidence you have gathered.
-"""
+# Use this tool once your investigation has yielded a complete thin slice from symptom to root cause,
+# with enough proof to let a simple code editing agent fix it.
+# """
 
 ReplaySubmitHypothesisTool = ChatCompletionToolParam(
     type='function',
@@ -112,49 +175,9 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
             'type': 'object',
             'properties': {
                 'rootCauseHypothesis': {'type': 'string'},
-                'thinSlice': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'point': {'type': 'string'},
-                            'code': {'type': 'string'},
-                            'role': {'type': 'string'},
-                        },
-                        'required': ['point', 'code', 'role'],
-                    },
-                },
-                'modifications': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'kind': {
-                                'type': 'string',
-                                'enum': ['add', 'remove', 'modify'],
-                            },
-                            'newCode': {'type': 'string'},
-                            'oldCode': {'type': 'string'},
-                            'location': {'type': 'string'},
-                            'point': {'type': 'string'},
-                            # NOTE: Even though, we really want the `line` here, it will lead to much worse performance because the agent has a hard time computing correct line numbers from its point-based investigation.
-                            # Instead of requiring a line number, the final fix will be more involved, as explained in the issue.
-                            # see: https://linear.app/replay/issue/PRO-939/use-tools-data-flow-analysis-for-10608#comment-3b7ae176
-                            # 'line': {'type': 'number'},
-                            'briefExplanation': {'type': 'string'},
-                            'verificationProof': {'type': 'string'},
-                        },
-                        'required': [
-                            'kind',
-                            'location',
-                            'briefExplanation',
-                            # 'line',
-                            'verificationProof',
-                        ],
-                    },
-                },
+                'editSuggestions': {'type': 'string'},
             },
-            'required': ['rootCauseHypothesis', 'thinSlice', 'modifications'],
+            'required': ['rootCauseHypothesis', 'editSuggestions'],
         },
     ),
 )
