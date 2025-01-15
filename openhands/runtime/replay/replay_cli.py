@@ -30,9 +30,9 @@ class ReplayCli:
             command_args['recordingId'] = action.recording_id
         if action.session_id != '':
             command_args['sessionId'] = action.session_id
-        if action.command_name == 'initial-analysis':
-            # Hardcode the path for now. We won't need it in the long run.
-            command_args['workspacePath'] = self.bash_session.workdir
+        # if action.command_name == 'initial-analysis':
+        #     # Hardcode the path for now. We won't need it in the long run.
+        #     command_args['workspacePath'] = self.bash_session.workdir
 
         with (
             tempfile.NamedTemporaryFile(
