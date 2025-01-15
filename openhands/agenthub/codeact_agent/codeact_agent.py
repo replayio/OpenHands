@@ -1,4 +1,3 @@
-import json
 import os
 from collections import deque
 
@@ -348,7 +347,8 @@ class CodeActAgent(Agent):
             codeact_replay_phase=phase,
         )
         logger.debug(
-            f'[REPLAY] CodeActAgent.replay_phase_changed({phase}). New tools: {json.dumps(self.tools, indent=2)}'
+            f'[REPLAY] CodeActAgent.replay_phase_changed({phase}).'
+            # f'New tools: {json.dumps(self.tools, indent=2)}'
         )
 
     def step(self, state: State) -> Action:
