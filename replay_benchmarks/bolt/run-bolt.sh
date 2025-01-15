@@ -35,13 +35,14 @@ fi
 
 # (Re-load) source files.
 SOURCE_ZIP_FILE="$EXPERIMENT_DIR/source_code.zip"
-if [[ ! -f "$SOURCE_ZIP_FILE" ]]; then
-    echo "Source code zip file \"$SOURCE_ZIP_FILE\" not found."
-    exit 1
-fi
 rm -rf $WORKSPACE_ROOT
 mkdir -p $WORKSPACE_ROOT
-unzip -q $SOURCE_ZIP_FILE -d $WORKSPACE_ROOT
+if [[ -f "$SOURCE_ZIP_FILE" ]]; then
+    unzip -q $SOURCE_ZIP_FILE -d $WORKSPACE_ROOT
+    echo "Source code extracted to \"$WORKSPACE_ROOT\"."
+else
+    echo "Running analysis WITHOUT source code..."
+fi
 
 # Config overrides + sanity checks.
 export DEBUG=1
