@@ -53,6 +53,12 @@ if [[ -f "$SOURCE_ZIP_FILE" ]]; then
         mv "$WORKSPACE_ROOT/project"/* "$WORKSPACE_ROOT"
         rm -rf "$WORKSPACE_ROOT/project"
     fi
+    pushd $WORKSPACE_ROOT > /dev/null
+    git init
+    git add -A
+    git commit -am "initial commit"
+    popd > /dev/null
+    echo "Workspace has been set up and git initialized."
 else
     echo "Running analysis WITHOUT source code..."
 fi
