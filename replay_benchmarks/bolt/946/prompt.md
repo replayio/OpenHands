@@ -1,4 +1,7 @@
-This "LLM Comparison" app should render the results of a single prompt provided to two different models.
+The following bug has been discovered in a web app inside a browser.
+NOTE: Networking errors might be caused by CORS problems. Their fix usually requires server middleware.
+
+This web app should render the results of a single prompt provided to two different models.
 The UI renders: `anthropic API error: Connection error`
 Fix it.
 

@@ -162,8 +162,7 @@ ReplayInspectPointTool = ChatCompletionToolParam(
 #     ),
 # )
 _REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION = """
-# Use this tool once your investigation has yielded a complete thin slice from symptom to root cause,
-# with enough proof to let a simple code editing agent fix it.
+# Use this tool to conclude your analysis and move on to code editing.
 # """
 
 ReplaySubmitHypothesisTool = ChatCompletionToolParam(
@@ -175,9 +174,12 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
             'type': 'object',
             'properties': {
                 'rootCauseHypothesis': {'type': 'string'},
-                'editSuggestions': {'type': 'string'},
+                'editSuggestions': {
+                    'type': 'string',
+                    'description': 'Provide suggestions to fix the bug, if you know enough about the code that requires modification.',
+                },
             },
-            'required': ['rootCauseHypothesis', 'editSuggestions'],
+            'required': ['rootCauseHypothesis'],
         },
     ),
 )
@@ -736,11 +738,10 @@ def get_tools(
         analysis_tools = [
             ReplayInspectDataTool,
             ReplayInspectPointTool,
-            ReplaySubmitHypothesisTool,
         ]
         if codeact_replay_phase == ReplayDebuggingPhase.Analysis:
             # Analysis tools only. This phase is concluded upon submit-hypothesis.
-            tools = analysis_tools
+            tools = analysis_tools + [ReplaySubmitHypothesisTool]
         elif codeact_replay_phase == ReplayDebuggingPhase.Edit:
             # Combine default and analysis tools.
             tools = default_tools + analysis_tools

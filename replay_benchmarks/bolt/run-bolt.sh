@@ -6,6 +6,7 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 EXPERIMENT_ID=$1
+PROMPT_NAME="$2"
 
 THIS_DIR="$(dirname "$0")"
 OH_ROOT="$THIS_DIR/.."
@@ -27,7 +28,15 @@ fi
 
 
 # Load prompt.
-PROMPT=$(cat $EXPERIMENT_DIR/prompt.md)
+if [[ -z "$PROMPT_NAME" ]]; then
+    PROMPT_NAME="prompt"
+fi
+PROMPT_FILE="$EXPERIMENT_DIR/$PROMPT_NAME.md"
+if [[ ! -f "$PROMPT_FILE" ]]; then
+    echo "Prompt file \"$PROMPT_FILE\" not found."
+    exit 1
+fi
+PROMPT=$(cat $PROMPT_FILE)
 if [[ -z "$PROMPT" ]]; then
     echo "Prompt file found but was empty."
     exit 1
@@ -39,7 +48,11 @@ rm -rf $WORKSPACE_ROOT
 mkdir -p $WORKSPACE_ROOT
 if [[ -f "$SOURCE_ZIP_FILE" ]]; then
     unzip -q $SOURCE_ZIP_FILE -d $WORKSPACE_ROOT
-    echo "Source code extracted to \"$WORKSPACE_ROOT\"."
+    # If it only contains a single folder called "project", move it up.
+    if [ -d "$WORKSPACE_ROOT/project" ] && [ $(ls -A "$WORKSPACE_ROOT" | wc -l) -eq 1 ]; then
+        mv "$WORKSPACE_ROOT/project"/* "$WORKSPACE_ROOT"
+        rm -rf "$WORKSPACE_ROOT/project"
+    fi
 else
     echo "Running analysis WITHOUT source code..."
 fi
@@ -47,6 +60,7 @@ fi
 # Config overrides + sanity checks.
 export DEBUG=1
 export REPLAY_DEV_MODE=1
+export REPLAY_ENABLE_TOOL_CACHE=1
 export WORKSPACE_BASE="$WORKSPACE_ROOT"
 export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
 if [[ -z "$LLM_API_KEY" ]]; then
