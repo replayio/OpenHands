@@ -268,7 +268,7 @@ class CodeActAgent(Agent):
             new_phase = obs.new_phase
             if new_phase == ReplayDebuggingPhase.Edit:
                 # Tell the agent to stop analyzing and start editing:
-                text = "You have concluded the analysis.\nIMPORTANT: NOW review, then implement the hypothesized changes using the edit tools available to you. The code is available in the workspace.\nIMPORTANT: Don't stop. Fix the bug.\nIMPORTANT: Don't stop. Fix the bug."
+                text = "You have concluded the analysis.\nIMPORTANT: NOW review, then implement the hypothesized changes using tools. The code is available in the workspace.\nIMPORTANT: Don't stop. Fix the bug.\nIMPORTANT: Don't stop. Fix the bug."
                 message = Message(role='user', content=[TextContent(text=text)])
             else:
                 raise NotImplementedError(

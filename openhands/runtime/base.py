@@ -140,10 +140,14 @@ class Runtime(FileEditRuntimeMixin):
         if self.config.sandbox.runtime_startup_env_vars:
             self.add_env_vars(self.config.sandbox.runtime_startup_env_vars)
 
-        logger.debug('Maybe adding replay env vars')
         if self.config.replay.api_key:
-            self.add_env_vars({'REPLAY_API_KEY': self.config.replay.api_key})
-            logger.debug('Added REPLAY_API_KEY to environment')
+            self.add_env_vars(
+                {
+                    'REPLAY_API_KEY': self.config.replay.api_key,
+                    'REPLAY_DEV_MODE': os.environ['REPLAY_DEV_MODE'],
+                    'REPLAY_ENABLE_TOOL_CACHE': os.environ['REPLAY_DEV_MODE'],
+                }
+            )
         if self.config.replay.dir:
             self.add_env_vars({'REPLAY_DIR': self.config.replay.dir})
             logger.debug('Added REPLAY_DIR to environment')
