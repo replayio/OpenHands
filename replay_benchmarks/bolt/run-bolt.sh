@@ -2,10 +2,10 @@
 set -e
 
 if [[ -z "$1" ]]; then
-    echo "Usage: $0 <experiment-id>"
+    echo "Usage: $0 <instance-id>"
     exit 1
 fi
-EXPERIMENT_ID=$1
+INSTANCE_ID=$1
 PROMPT_NAME="$2"
 
 THIS_DIR="$(dirname "$0")"
@@ -14,12 +14,13 @@ OH_ROOT="$(node -e 'console.log(require("path").resolve(process.argv[1]))' $OH_R
 if [[ -z "$TMP_DIR" ]]; then
     TMP_DIR="/tmp"
 fi
-WORKSPACE_ROOT="$TMP_DIR/bolt/workspace/$EXPERIMENT_ID"
-EXPERIMENT_DIR="$THIS_DIR/$EXPERIMENT_ID"
+TARGET_FOLDER="$TMP_DIR/bolt/$INSTANCE_ID"
+WORKSPACE_ROOT="$TARGET_FOLDER/workspace"
+INSTANCE_DIR="$THIS_DIR/$INSTANCE_ID"
 
-if [[ ! -d "$EXPERIMENT_DIR" ]]; then
-    echo -e "Experiment directory \"$EXPERIMENT_DIR\" not found.\n"
-    echo -e "Available experiment folders:\n"
+if [[ ! -d "$INSTANCE_DIR" ]]; then
+    echo -e "Instance directory \"$INSTANCE_DIR\" not found.\n"
+    echo -e "Available instance folders:\n"
     # List all sub folders
     ls -1 -d $THIS_DIR/*/
     echo -e "\n"
@@ -31,7 +32,7 @@ fi
 if [[ -z "$PROMPT_NAME" ]]; then
     PROMPT_NAME="prompt"
 fi
-PROMPT_FILE="$EXPERIMENT_DIR/$PROMPT_NAME.md"
+PROMPT_FILE="$INSTANCE_DIR/$PROMPT_NAME.md"
 if [[ ! -f "$PROMPT_FILE" ]]; then
     echo "Prompt file \"$PROMPT_FILE\" not found."
     exit 1
@@ -43,7 +44,7 @@ if [[ -z "$PROMPT" ]]; then
 fi
 
 # (Re-load) source files.
-SOURCE_ZIP_FILE="$EXPERIMENT_DIR/source_code.zip"
+SOURCE_ZIP_FILE="$INSTANCE_DIR/source_code.zip"
 rm -rf $WORKSPACE_ROOT
 mkdir -p $WORKSPACE_ROOT
 if [[ -f "$SOURCE_ZIP_FILE" ]]; then
@@ -54,9 +55,9 @@ if [[ -f "$SOURCE_ZIP_FILE" ]]; then
         rm -rf "$WORKSPACE_ROOT/project"
     fi
     pushd $WORKSPACE_ROOT > /dev/null
-    git init
-    git add -A
-    git commit -am "initial commit"
+    git init > /dev/null
+    git add -A > /dev/null
+    git commit -am "initial commit" > /dev/null
     popd > /dev/null
     echo "Workspace has been set up and git initialized."
 else
@@ -78,8 +79,8 @@ if [[ -z "$LLM_API_KEY" ]]; then
 fi
 
 # Logging.
-LOG_FILE="$TMP_DIR/tmp.log"
-echo "WORKSPACE_ROOT = $WORKSPACE_ROOT"
+LOG_FILE="$TARGET_FOLDER/default.log"
+echo "WORKSPACE_ROOT: \"$WORKSPACE_ROOT\""
 echo "Logging to \"$LOG_FILE\"..."
 
 # GO.
