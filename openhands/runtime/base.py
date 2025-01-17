@@ -144,8 +144,8 @@ class Runtime(FileEditRuntimeMixin):
             self.add_env_vars(
                 {
                     'REPLAY_API_KEY': self.config.replay.api_key,
-                    'REPLAY_DEV_MODE': os.environ['REPLAY_DEV_MODE'],
-                    'REPLAY_ENABLE_TOOL_CACHE': os.environ['REPLAY_DEV_MODE'],
+                    'REPLAY_DEV_MODE': os.environ.get('REPLAY_DEV_MODE', ''),
+                    'REPLAY_ENABLE_TOOL_CACHE': os.environ.get('REPLAY_DEV_MODE', ''),
                 }
             )
         if self.config.replay.dir:

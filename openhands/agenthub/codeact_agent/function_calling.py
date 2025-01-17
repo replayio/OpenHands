@@ -651,7 +651,7 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
                     )
                 elif tool_call.function.name == 'submit-hypothesis':
                     action = ReplayPhaseUpdateAction(
-                        new_phase=ReplayDebuggingPhase.Edit
+                        new_phase=ReplayDebuggingPhase.Edit, info=json.dumps(arguments)
                     )
                 else:
                     raise ValueError(
