@@ -28,15 +28,6 @@ def command_annotate_execution_points(
     thought: str, is_workspace_repo: bool
 ) -> ReplayInternalCmdRunAction:
     command_input: dict[str, Any] = dict()
-    if is_workspace_repo:
-        # NOTE: In the resolver workflow, the workdir path is equal to the repo path:
-        #    1. We should not append the repo name to the path.
-        #    2. The resolver also already hard-reset the repo, so forceDelete is not necessary.
-        command_input['isWorkspaceRepoPath'] = True
-        command_input['forceDelete'] = False
-    else:
-        command_input['isWorkspaceRepoPath'] = False
-        command_input['forceDelete'] = True
     command_input['prompt'] = thought
 
     action = ReplayInternalCmdRunAction(

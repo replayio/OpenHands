@@ -66,6 +66,7 @@ class ReplayPhaseUpdateAction(Action):
     new_phase: ReplayDebuggingPhase
 
     thought: str = ''
+    info: str = ''
 
     action: str = ActionType.REPLAY_UPDATE_PHASE
     runnable: ClassVar[bool] = True
@@ -77,5 +78,5 @@ class ReplayPhaseUpdateAction(Action):
         return f'{self.__class__.__name__}: {self.new_phase}'
 
     def __str__(self) -> str:
-        ret = f'{self.message}'
+        ret = f'[{self.message}] {self.info}'
         return ret

@@ -95,13 +95,75 @@ ReplayInspectPointTool = ChatCompletionToolParam(
 
 # ---------------------------------------------------------
 # Tool: SubmitHypothesis
+# TODO: Divide this into multiple steps -
+#   1. The first submission must be as simple as possible to take little computational effort from the analysis steps.
+#   2. The second submission, after analysis has already concluded, must be as complete as possible.
 # ---------------------------------------------------------
+# _REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION = """
+# Your investigation has yielded a complete thin slice from symptom to root cause,
+# enough proof to let the `CodeEdit` agent take over to fix the bug.
+# DO NOT GUESS. You must provide exact code in the exact right location to fix this bug,
+# based on evidence you have gathered.
+# """
+
+# ReplaySubmitHypothesisTool = ChatCompletionToolParam(
+#     type='function',
+#     function=ChatCompletionToolParamFunctionChunk(
+#         name='submit-hypothesis',
+#         description=_REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION.strip(),
+#         parameters={
+#             'type': 'object',
+#             'properties': {
+#                 'rootCauseHypothesis': {'type': 'string'},
+#                 'thinSlice': {
+#                     'type': 'array',
+#                     'items': {
+#                         'type': 'object',
+#                         'properties': {
+#                             'point': {'type': 'string'},
+#                             'code': {'type': 'string'},
+#                             'role': {'type': 'string'},
+#                         },
+#                         'required': ['point', 'code', 'role'],
+#                     },
+#                 },
+#                 'modifications': {
+#                     'type': 'array',
+#                     'items': {
+#                         'type': 'object',
+#                         'properties': {
+#                             'kind': {
+#                                 'type': 'string',
+#                                 'enum': ['add', 'remove', 'modify'],
+#                             },
+#                             'newCode': {'type': 'string'},
+#                             'oldCode': {'type': 'string'},
+#                             'location': {'type': 'string'},
+#                             'point': {'type': 'string'},
+#                             # NOTE: Even though, we really want the `line` here, it will lead to much worse performance because the agent has a hard time computing correct line numbers from its point-based investigation.
+#                             # Instead of requiring a line number, the final fix will be more involved, as explained in the issue.
+#                             # see: https://linear.app/replay/issue/PRO-939/use-tools-data-flow-analysis-for-10608#comment-3b7ae176
+#                             # 'line': {'type': 'number'},
+#                             'briefExplanation': {'type': 'string'},
+#                             'verificationProof': {'type': 'string'},
+#                         },
+#                         'required': [
+#                             'kind',
+#                             'location',
+#                             'briefExplanation',
+#                             # 'line',
+#                             'verificationProof',
+#                         ],
+#                     },
+#                 },
+#             },
+#             'required': ['rootCauseHypothesis', 'thinSlice', 'modifications'],
+#         },
+#     ),
+# )
 _REPLAY_SUBMIT_HYPOTHESIS_DESCRIPTION = """
-Your investigation has yielded a complete thin slice from symptom to root cause,
-enough proof to let the `CodeEdit` agent take over to fix the bug.
-DO NOT GUESS. You must provide exact code in the exact right location to fix this bug,
-based on evidence you have gathered.
-"""
+# Use this tool to conclude your analysis and move on to code editing.
+# """
 
 ReplaySubmitHypothesisTool = ChatCompletionToolParam(
     type='function',
@@ -112,49 +174,12 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
             'type': 'object',
             'properties': {
                 'rootCauseHypothesis': {'type': 'string'},
-                'thinSlice': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'point': {'type': 'string'},
-                            'code': {'type': 'string'},
-                            'role': {'type': 'string'},
-                        },
-                        'required': ['point', 'code', 'role'],
-                    },
-                },
-                'modifications': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'properties': {
-                            'kind': {
-                                'type': 'string',
-                                'enum': ['add', 'remove', 'modify'],
-                            },
-                            'newCode': {'type': 'string'},
-                            'oldCode': {'type': 'string'},
-                            'location': {'type': 'string'},
-                            'point': {'type': 'string'},
-                            # NOTE: Even though, we really want the `line` here, it will lead to much worse performance because the agent has a hard time computing correct line numbers from its point-based investigation.
-                            # Instead of requiring a line number, the final fix will be more involved, as explained in the issue.
-                            # see: https://linear.app/replay/issue/PRO-939/use-tools-data-flow-analysis-for-10608#comment-3b7ae176
-                            # 'line': {'type': 'number'},
-                            'briefExplanation': {'type': 'string'},
-                            'verificationProof': {'type': 'string'},
-                        },
-                        'required': [
-                            'kind',
-                            'location',
-                            'briefExplanation',
-                            # 'line',
-                            'verificationProof',
-                        ],
-                    },
+                'editSuggestions': {
+                    'type': 'string',
+                    'description': 'Provide suggestions to fix the bug, if you know enough about the code that requires modification.',
                 },
             },
-            'required': ['rootCauseHypothesis', 'thinSlice', 'modifications'],
+            'required': ['rootCauseHypothesis'],
         },
     ),
 )
@@ -626,7 +651,7 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
                     )
                 elif tool_call.function.name == 'submit-hypothesis':
                     action = ReplayPhaseUpdateAction(
-                        new_phase=ReplayDebuggingPhase.Edit
+                        new_phase=ReplayDebuggingPhase.Edit, info=json.dumps(arguments)
                     )
                 else:
                     raise ValueError(
@@ -713,11 +738,10 @@ def get_tools(
         analysis_tools = [
             ReplayInspectDataTool,
             ReplayInspectPointTool,
-            ReplaySubmitHypothesisTool,
         ]
         if codeact_replay_phase == ReplayDebuggingPhase.Analysis:
             # Analysis tools only. This phase is concluded upon submit-hypothesis.
-            tools = analysis_tools
+            tools = analysis_tools + [ReplaySubmitHypothesisTool]
         elif codeact_replay_phase == ReplayDebuggingPhase.Edit:
             # Combine default and analysis tools.
             tools = default_tools + analysis_tools
