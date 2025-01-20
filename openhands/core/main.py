@@ -279,11 +279,18 @@ if __name__ == '__main__':
     if args.max_iterations is not None:
         config.max_iterations = args.max_iterations
 
+    def fake_user_response(
+        state: State,
+        encapsulate_solution: bool = False,
+        try_parse: Callable[[Action | None], str] | None = None,
+    ) -> str:
+        return 'IMPORTANT: YOU SHOULD NEVER ASK FOR HUMAN INPUT. Keep working.'
+
     asyncio.run(
         run_controller(
             config=config,
             initial_user_action=initial_user_action,
             sid=sid,
-            exit_on_message=True,
+            fake_user_response_fn=fake_user_response,
         )
     )

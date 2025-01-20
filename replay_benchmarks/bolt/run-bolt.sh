@@ -87,3 +87,10 @@ echo "Logging to \"$LOG_FILE\"..."
 cd $OH_ROOT
 poetry run python -m openhands.core.main -t "$PROMPT" \
     > "$LOG_FILE" 2>&1
+
+
+# Log the relevant diff.
+echo "Diff:"
+pushd $WORKSPACE_ROOT > /dev/null
+git --no-pager diff | grep -C 5 "map\.setView"
+popd > /dev/null

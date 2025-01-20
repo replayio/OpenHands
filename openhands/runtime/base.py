@@ -145,7 +145,9 @@ class Runtime(FileEditRuntimeMixin):
                 {
                     'REPLAY_API_KEY': self.config.replay.api_key,
                     'REPLAY_DEV_MODE': os.environ.get('REPLAY_DEV_MODE', ''),
-                    'REPLAY_ENABLE_TOOL_CACHE': os.environ.get('REPLAY_DEV_MODE', ''),
+                    'REPLAY_ENABLE_TOOL_CACHE': os.environ.get(
+                        'REPLAY_ENABLE_TOOL_CACHE', ''
+                    ),
                 }
             )
         if self.config.replay.dir:

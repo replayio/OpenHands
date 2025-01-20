@@ -173,6 +173,10 @@ ReplaySubmitHypothesisTool = ChatCompletionToolParam(
         parameters={
             'type': 'object',
             'properties': {
+                'problem': {
+                    'type': 'string',
+                    'description': 'One-sentence explanation of the core problem that this will solve.',
+                },
                 'rootCauseHypothesis': {'type': 'string'},
                 'editSuggestions': {
                     'type': 'string',

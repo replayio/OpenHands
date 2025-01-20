@@ -57,7 +57,9 @@ class ReplayCli:
 
             # Construct and execute command.
             output_path = output_file.name
-            command = f'/replay/replayapi/main-tool.sh {input_path} {output_path}'
+            # debug_prefix = 'DEBUG=replay* '
+            debug_prefix = ''
+            command = f'{debug_prefix}/replay/replayapi/main-tool.sh {input_path} {output_path}'
 
             if action.in_workspace_dir:
                 # Work from the workspace directory.
