@@ -21,7 +21,7 @@ from openhands.replay.replay_phases import get_replay_child_phase
 
 
 class ReplayToolType(Enum):
-    Analysis = ('analysis',)
+    Analysis = 'analysis'
     PhaseTransition = 'phase_transition'
 
 
@@ -33,11 +33,36 @@ class ReplayAnalysisTool(ReplayTool):
     replay_tool_type = ReplayToolType.Analysis
 
 
-def replay_tool(name: str, description: str, parameters: dict) -> ReplayTool:
-    f = ChatCompletionToolParamFunctionChunk(
-        name=name, description=description, parameters=parameters
+def replay_analysis_tool(name: str, description: str, parameters: dict) -> ReplayTool:
+    tool = ReplayAnalysisTool(
+        replay_tool_type=ReplayToolType.Analysis,
+        type='function',
+        function=ChatCompletionToolParamFunctionChunk(
+            name=name, description=description, parameters=parameters
+        ),
     )
-    return ReplayAnalysisTool(type='function', function=f)
+    return tool
+
+
+class ReplayPhaseTransitionTool(ReplayTool):
+    replay_tool_type = ReplayToolType.PhaseTransition
+    new_phase: ReplayPhase
+
+
+def replay_phase_tool(
+    new_phase: ReplayPhase, name: str, description: str, parameters: dict
+):
+    tool = ReplayPhaseTransitionTool(
+        replay_tool_type=ReplayToolType.PhaseTransition,
+        new_phase=new_phase,
+        type='function',
+        function=ChatCompletionToolParamFunctionChunk(
+            name=name,
+            description=description,
+            parameters=parameters,
+        ),
+    )
+    return tool
 
 
 # ###########################################################################
@@ -50,7 +75,7 @@ Explains value, data flow and origin information for `expression` at `point`.
 IMPORTANT: Prefer using inspect-data over inspect-point.
 """
 
-ReplayInspectDataTool = replay_tool(
+ReplayInspectDataTool = replay_analysis_tool(
     name='inspect-data',
     description=_REPLAY_INSPECT_DATA_DESCRIPTION.strip(),
     parameters={
@@ -82,7 +107,7 @@ Explains dynamic control flow and data flow dependencies of the code at `point`.
 Use this tool instead of `inspect-data` only when you don't have a specific data point to investigate.
 """
 
-ReplayInspectPointTool = replay_tool(
+ReplayInspectPointTool = replay_analysis_tool(
     name='inspect-point',
     description=_REPLAY_INSPECT_POINT_DESCRIPTION.strip(),
     parameters={
@@ -98,23 +123,6 @@ ReplayInspectPointTool = replay_tool(
 # ###########################################################################
 # Phase transitions + submissions.
 # ###########################################################################
-
-
-class ReplayPhaseTransitionTool(ReplayTool):
-    replay_tool_type = ReplayToolType.PhaseTransition
-    new_phase: ReplayPhase
-
-
-def replay_phase_tool(
-    new_phase: ReplayPhase, name: str, description: str, parameters: dict
-):
-    return ReplayPhaseTransitionTool(
-        new_phase=new_phase,
-        type='function',
-        function=ChatCompletionToolParamFunctionChunk(
-            name=name, description=description, parameters=parameters
-        ),
-    )
 
 
 replay_phase_transition_tools: list[ReplayPhaseTransitionTool] = [
@@ -155,8 +163,7 @@ replay_tools: list[ReplayTool] = [
 ]
 replay_tool_names: set[str] = set([t['function']['name'] for t in replay_tools])
 replay_replay_tool_type_by_name = {
-    t['function']['name']: t['function'].get('replay_tool_type', None)
-    for t in replay_tools
+    t['function']['name']: t.get('replay_tool_type', None) for t in replay_tools
 }
 
 
@@ -172,6 +179,24 @@ def is_replay_tool(
 # ###########################################################################
 # Compute tools based on the current ReplayPhase.
 # ###########################################################################
+
+
+def get_replay_transition_tool_for_current_phase(
+    current_phase: ReplayPhase, name: str | None = None
+) -> ReplayTool | None:
+    next_phase = get_replay_child_phase(current_phase)
+    if next_phase:
+        transition_tools = [
+            t
+            for t in replay_phase_transition_tools
+            if t['new_phase'] == next_phase
+            and (not name or t['function']['name'] == name)
+        ]
+        assert len(
+            transition_tools
+        ), f'replay_phase_transition_tools is missing tools for new_phase: {next_phase}'
+        return transition_tools[0]
+    return None
 
 
 def get_replay_tools(
@@ -190,15 +215,9 @@ def get_replay_tools(
         raise ValueError(f'Unhandled ReplayPhase in get_tools: {replay_phase}')
 
     # Add tools to allow transitioning to next phase.
-    next_phase = get_replay_child_phase(replay_phase)
-    if next_phase:
-        transition_tools = [
-            t for t in replay_phase_transition_tools if t['new_phase'] == next_phase
-        ]
-        assert len(
-            transition_tools
-        ), f'replay_phase_transition_tools is missing tools for new_phase: {next_phase}'
-        tools += transition_tools
+    next_phase_tool = get_replay_transition_tool_for_current_phase(replay_phase)
+    if next_phase_tool:
+        tools.append(next_phase_tool)
 
     # Return all tools.
     return tools
@@ -234,8 +253,18 @@ def handle_replay_tool_call(
             )
     elif is_replay_tool(name, ReplayToolType.PhaseTransition):
         # Request a phase change.
+        tool = get_replay_transition_tool_for_current_phase(state.replay_phase, name)
+        assert tool, f'Missing ReplayPhaseTransitionTool for {state.replay_phase} in Replay tool_call: {tool_call.function.name}'
+        new_phase = tool['new_phase']
+        assert (
+            new_phase
+        ), f'Missing new_phase in Replay tool_call: {tool_call.function.name}'
+        assert (
+            new_phase
+        ), f'Missing new_phase in Replay tool_call: {tool_call.function.name}'
+        del arguments['new_phase']
         action = ReplayPhaseUpdateAction(
-            new_phase=tool_call['new_phase'], info=json.dumps(arguments)
+            new_phase=new_phase, info=json.dumps(arguments)
         )
     assert action, f'Unhandled Replay tool_call: {tool_call.function.name}'
     return action
