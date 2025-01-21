@@ -312,11 +312,13 @@ class AgentController:
             elif isinstance(observation, ReplayPhaseUpdateObservation):
                 new_phase = observation.new_phase
                 if self.state.replay_phase == new_phase:
-                    raise ValueError(
-                        f'Unexpected ReplayPhaseUpdateAction. Already in phase: {new_phase}'
+                    self.log(
+                        'warning',
+                        f'Unexpected ReplayPhaseUpdateAction. Already in phase. Observation:\n {repr(observation)}',
                     )
-                self.state.replay_phase = new_phase
-                self.agent.replay_phase_changed(new_phase)
+                else:
+                    self.state.replay_phase = new_phase
+                    self.agent.replay_phase_changed(new_phase)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:
                 await self.set_agent_state_to(AgentState.RUNNING)

@@ -135,7 +135,17 @@ def handle_replay_internal_observation(
             # New workflow: initial-analysis provided the metadata to allow tool use.
             metadata, data = split_metadata(result)
             prefix = ''
-            suffix = f'* This bug had a timetravel debugger recording.\n* Use below `Initial Analysis` and the timetravel debugger `inspect-*` tools to find the bug.\n* Once found, `submit-hypothesis`, so your analysis can be used to implement the solution.\n\n## Initial Analysis\n{json.dumps(data, indent=2)}'
+            suffix = """
+# Instructions
+0. Take a look at below `Initial Analysis`, based on a recorded trace of the bug. Pay special attention to `IMPORTANT_NOTES`.
+1. State the main problem statement. It MUST address `IMPORTANT_NOTES`. It must make sure that the application won't crash. It must fix the issue.
+2. Propose a plan to fix or investigate with multiple options in order of priority.
+3. Then use the `inspect-*` tools to investigate.
+4. Once found, `submit-hypothesis`.
+
+
+# Initial Analysis
+""" + json.dumps(data, indent=2)
             enhance_prompt(
                 user_message,
                 prefix,
