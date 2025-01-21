@@ -85,9 +85,7 @@ def on_replay_internal_command_observation(
     state: State, observation: ReplayInternalCmdOutputObservation
 ) -> AnalysisToolMetadata | None:
     """
-    Handle result for an internally sent command (not agent tool use or user action).
-
-    NOTE: Currently, the only internal command is the initial-analysis command.
+    Handle result for an internal (automatically or user-triggered sent) command.
     Enhance the user prompt with the results of the initial analysis.
     Returns the metadata needed for the agent to switch to analysis tools.
     """

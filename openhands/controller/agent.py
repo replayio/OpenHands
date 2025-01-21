@@ -63,12 +63,9 @@ class Agent(ABC):
         if self.llm:
             self.llm.reset()
 
-    # the "noqa" below is so we can add an empty but not abstract method. otherwise we'd need an empty
-    # implmentation in every subclass other than CodeActAgent (which does override it.)
-    def replay_phase_changed(self, phase: ReplayPhase) -> None:  # noqa: B027
-        """Called when the phase of the replay debugging process changes. This method
-        can be used to update the agent's behavior based on the phase.
-        """
+    # `noqa: B027` is necessary to have an empty method implementation.
+    def update_tools(self, phase: ReplayPhase) -> None:  # noqa: B027
+        """Agent tools might have changed due to some observed event."""
         pass
 
     @property

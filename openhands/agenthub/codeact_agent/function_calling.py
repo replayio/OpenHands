@@ -548,11 +548,9 @@ def get_tools(
         codeact_enable_llm_editor,
         codeact_enable_jupyter,
     )
-    if not codeact_enable_replay or replay_phase == ReplayPhase.Normal:
-        # Use the default tools when not in a Replay-specific phase.
-        return default_tools
-
     if codeact_enable_replay:
-        tools = get_replay_tools(replay_phase, default_tools)
+        # Handle Replay tool updates.
+        return get_replay_tools(replay_phase, default_tools)
 
-    return tools
+    # Just the default tools.
+    return default_tools

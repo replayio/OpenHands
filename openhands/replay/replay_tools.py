@@ -221,6 +221,10 @@ def handle_replay_tool_call(
 def get_replay_tools(
     replay_phase: ReplayPhase, default_tools: list[ChatCompletionToolParam]
 ) -> list[ChatCompletionToolParam]:
+    if replay_phase == ReplayPhase.Normal:
+        # Use the default tools when not in a Replay-specific phase.
+        return default_tools
+
     analysis_tools = [
         ReplayInspectDataTool,
         ReplayInspectPointTool,

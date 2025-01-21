@@ -20,7 +20,7 @@ from openhands.core.exceptions import (
 )
 from openhands.core.logger import LOG_ALL_EVENTS
 from openhands.core.logger import openhands_logger as logger
-from openhands.core.schema import AgentState, ReplayPhase
+from openhands.core.schema import AgentState
 from openhands.events import EventSource, EventStream, EventStreamSubscriber
 from openhands.events.action import (
     Action,
@@ -53,7 +53,7 @@ from openhands.events.observation.replay import (
 )
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
-from openhands.replay.replay_state_machine import on_replay_observation
+from openhands.replay.replay_phases import on_controller_replay_observation
 from openhands.utils.shutdown_listener import should_continue
 
 # note: RESUME is only available on web GUI
@@ -144,8 +144,6 @@ class AgentController:
         # stuck helper
         self._stuck_detector = StuckDetector(self.state)
         self.status_callback = status_callback
-
-        self.replay_phase = ReplayPhase.Normal
 
     async def close(self) -> None:
         """Closes the agent controller, canceling any ongoing tasks and unsubscribing from the event stream.
@@ -298,7 +296,7 @@ class AgentController:
         if self._pending_action and self._pending_action.id == observation.cause:
             self._pending_action = None
             if isinstance(observation, ReplayObservation):
-                on_replay_observation(observation, self.state, self.agent)
+                on_controller_replay_observation(observation, self.state, self.agent)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:
                 await self.set_agent_state_to(AgentState.RUNNING)

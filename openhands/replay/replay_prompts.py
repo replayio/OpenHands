@@ -23,42 +23,8 @@ def replay_prompt_phase_analysis(command_result: dict, prompt: str) -> str:
 3. Then use the `inspect-*` tools to investigate.
 4. Once found, `submit-hypothesis`.
 
-
 # Initial Analysis
 """ + json.dumps(command_result, indent=2)
-    return enhance_prompt(prompt, prefix, suffix)
-
-
-def replay_prompt_phase_analysis_legacy(command_result: dict, prompt: str) -> str:
-    # Old workflow: initial-analysis left hints in form of source code annotations.
-    annotated_repo_path = command_result.get('annotatedRepo', '')
-    comment_text = command_result.get('commentText', '')
-    react_component_name = command_result.get('reactComponentName', '')
-    console_error = command_result.get('consoleError', '')
-    # start_location = result.get('startLocation', '')
-    start_name = command_result.get('startName', '')
-
-    # TODO: Move this to a prompt template file.
-    if comment_text:
-        if react_component_name:
-            prefix = (
-                f'There is a change needed to the {react_component_name} component.\n'
-            )
-        else:
-            prefix = f'There is a change needed in {annotated_repo_path}:\n'
-        prefix += f'{comment_text}\n\n'
-    elif console_error:
-        prefix = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
-        prefix += f'{console_error}\n\n'
-
-    prefix += '<IMPORTANT>\n'
-    prefix += 'Information about a reproduction of the problem is available in source comments.\n'
-    prefix += 'You must search for these comments and use them to get a better understanding of the problem.\n'
-    prefix += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
-    prefix += '</IMPORTANT>\n'
-
-    suffix = ''
-
     return enhance_prompt(prompt, prefix, suffix)
 
 
@@ -73,3 +39,36 @@ IMPORTANT: NOW review, then implement the hypothesized changes using tools. The 
   3. Do the `editSuggestions` actually address the issue?
   4. Rephrase the hypothesis so that it is consistent and correct.
 """
+
+
+# def replay_prompt_phase_analysis_legacy(command_result: dict, prompt: str) -> str:
+#     # Old workflow: initial-analysis left hints in form of source code annotations.
+#     annotated_repo_path = command_result.get('annotatedRepo', '')
+#     comment_text = command_result.get('commentText', '')
+#     react_component_name = command_result.get('reactComponentName', '')
+#     console_error = command_result.get('consoleError', '')
+#     # start_location = result.get('startLocation', '')
+#     start_name = command_result.get('startName', '')
+
+#     # TODO: Move this to a prompt template file.
+#     if comment_text:
+#         if react_component_name:
+#             prefix = (
+#                 f'There is a change needed to the {react_component_name} component.\n'
+#             )
+#         else:
+#             prefix = f'There is a change needed in {annotated_repo_path}:\n'
+#         prefix += f'{comment_text}\n\n'
+#     elif console_error:
+#         prefix = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
+#         prefix += f'{console_error}\n\n'
+
+#     prefix += '<IMPORTANT>\n'
+#     prefix += 'Information about a reproduction of the problem is available in source comments.\n'
+#     prefix += 'You must search for these comments and use them to get a better understanding of the problem.\n'
+#     prefix += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
+#     prefix += '</IMPORTANT>\n'
+
+#     suffix = ''
+
+#     return enhance_prompt(prompt, prefix, suffix)
