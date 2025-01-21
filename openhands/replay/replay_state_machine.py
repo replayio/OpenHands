@@ -2,7 +2,7 @@ from openhands.controller.agent import Agent
 from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import Message, TextContent
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.observation.replay import (
     ReplayInternalCmdOutputObservation,
     ReplayObservation,
@@ -24,8 +24,8 @@ def on_replay_observation(obs: ReplayObservation, state: State, agent: Agent) ->
         if analysis_tool_metadata:
             # Start analysis phase
             state.replay_recording_id = analysis_tool_metadata['recordingId']
-            state.replay_phase = ReplayDebuggingPhase.Analysis
-            agent.replay_phase_changed(ReplayDebuggingPhase.Analysis)
+            state.replay_phase = ReplayPhase.Analysis
+            agent.replay_phase_changed(ReplayPhase.Analysis)
     elif isinstance(obs, ReplayPhaseUpdateObservation):
         new_phase = obs.new_phase
         if state.replay_phase == new_phase:
@@ -53,7 +53,7 @@ def get_replay_observation_message(
         message = Message(role='user', content=[TextContent(text=text)])
     elif isinstance(obs, ReplayPhaseUpdateObservation):
         new_phase = obs.new_phase
-        if new_phase == ReplayDebuggingPhase.Edit:
+        if new_phase == ReplayPhase.Edit:
             text = replay_prompt_phase_edit(obs)
         else:
             raise NotImplementedError(f'Unhandled ReplayPhaseUpdateAction: {new_phase}')

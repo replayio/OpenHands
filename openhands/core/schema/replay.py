@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class ReplayDebuggingPhase(str, Enum):
+class ReplayPhase(str, Enum):
     Normal = 'normal'
     """The agent is not doing anything related to Replay.
     """

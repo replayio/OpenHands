@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Type
 
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 
 if TYPE_CHECKING:
     from openhands.controller.state.state import State
@@ -65,7 +65,7 @@ class Agent(ABC):
 
     # the "noqa" below is so we can add an empty but not abstract method. otherwise we'd need an empty
     # implmentation in every subclass other than CodeActAgent (which does override it.)
-    def replay_phase_changed(self, phase: ReplayDebuggingPhase) -> None:  # noqa: B027
+    def replay_phase_changed(self, phase: ReplayPhase) -> None:  # noqa: B027
         """Called when the phase of the replay debugging process changes. This method
         can be used to update the agent's behavior based on the phase.
         """

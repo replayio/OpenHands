@@ -20,7 +20,7 @@ from openhands.core.exceptions import (
 )
 from openhands.core.logger import LOG_ALL_EVENTS
 from openhands.core.logger import openhands_logger as logger
-from openhands.core.schema import AgentState, ReplayDebuggingPhase
+from openhands.core.schema import AgentState, ReplayPhase
 from openhands.events import EventSource, EventStream, EventStreamSubscriber
 from openhands.events.action import (
     Action,
@@ -145,7 +145,7 @@ class AgentController:
         self._stuck_detector = StuckDetector(self.state)
         self.status_callback = status_callback
 
-        self.replay_phase = ReplayDebuggingPhase.Normal
+        self.replay_phase = ReplayPhase.Normal
 
     async def close(self) -> None:
         """Closes the agent controller, canceling any ongoing tasks and unsubscribing from the event stream.

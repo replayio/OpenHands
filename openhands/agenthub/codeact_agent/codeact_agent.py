@@ -9,7 +9,7 @@ from openhands.controller.state.state import State
 from openhands.core.config import AgentConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import ImageContent, Message, TextContent
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.action import (
     Action,
     AgentDelegateAction,
@@ -104,7 +104,7 @@ class CodeActAgent(Agent):
 
         # We're in normal mode by default (even if replay is not enabled).
         # This will initialize the set of tools the agent has access to.
-        self.replay_phase_changed(ReplayDebuggingPhase.Normal)
+        self.replay_phase_changed(ReplayPhase.Normal)
 
         self.prompt_manager = PromptManager(
             microagent_dir=os.path.join(os.path.dirname(__file__), 'micro')
@@ -316,7 +316,7 @@ class CodeActAgent(Agent):
         """Resets the CodeAct Agent."""
         super().reset()
 
-    def replay_phase_changed(self, phase: ReplayDebuggingPhase) -> None:
+    def replay_phase_changed(self, phase: ReplayPhase) -> None:
         """Called whenenever the phase of the replay debugging process changes.
 
         We currently use this to give the agent access to different tools for the

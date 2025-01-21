@@ -2,7 +2,7 @@ from abc import ABC
 from dataclasses import dataclass
 
 from openhands.core.schema import ObservationType
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.observation.observation import Observation
 
 
@@ -45,7 +45,7 @@ class ReplayToolCmdOutputObservation(ReplayCmdOutputObservationBase):
 
 @dataclass
 class ReplayPhaseUpdateObservation(ReplayObservation):
-    new_phase: ReplayDebuggingPhase
+    new_phase: ReplayPhase
     observation: str = ObservationType.REPLAY_UPDATE_PHASE
 
     @property

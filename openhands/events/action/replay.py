@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 
 from openhands.core.schema import ActionType
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.action.action import (
     Action,
     ActionConfirmationStatus,
@@ -68,7 +68,7 @@ class ReplayToolCmdRunAction(ReplayCmdRunActionBase):
 
 @dataclass
 class ReplayPhaseUpdateAction(ReplayAction):
-    new_phase: ReplayDebuggingPhase
+    new_phase: ReplayPhase
 
     thought: str = ''
     info: str = ''

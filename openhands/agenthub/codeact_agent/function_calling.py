@@ -15,7 +15,7 @@ from litellm import (
 from openhands.controller.state.state import State
 from openhands.core.exceptions import FunctionCallNotExistsError
 from openhands.core.logger import openhands_logger as logger
-from openhands.core.schema import ReplayDebuggingPhase
+from openhands.core.schema import ReplayPhase
 from openhands.events.action import (
     Action,
     AgentDelegateAction,
@@ -541,14 +541,14 @@ def get_tools(
     codeact_enable_llm_editor: bool = False,
     codeact_enable_jupyter: bool = False,
     codeact_enable_replay: bool = False,
-    replay_phase: ReplayDebuggingPhase = ReplayDebuggingPhase.Normal,
+    replay_phase: ReplayPhase = ReplayPhase.Normal,
 ) -> list[ChatCompletionToolParam]:
     default_tools = get_default_tools(
         codeact_enable_browsing,
         codeact_enable_llm_editor,
         codeact_enable_jupyter,
     )
-    if not codeact_enable_replay or replay_phase == ReplayDebuggingPhase.Normal:
+    if not codeact_enable_replay or replay_phase == ReplayPhase.Normal:
         # Use the default tools when not in a Replay-specific phase.
         return default_tools
 

@@ -13,7 +13,7 @@ from litellm import (
 
 from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.action.replay import (
     ReplayAction,
     ReplayPhaseUpdateAction,
@@ -209,7 +209,7 @@ def handle_replay_tool_call(
         )
     elif tool_call.function.name == 'submit-hypothesis':
         action = ReplayPhaseUpdateAction(
-            new_phase=ReplayDebuggingPhase.Edit, info=json.dumps(arguments)
+            new_phase=ReplayPhase.Edit, info=json.dumps(arguments)
         )
     else:
         raise ValueError(
@@ -219,18 +219,18 @@ def handle_replay_tool_call(
 
 
 def get_replay_tools(
-    replay_phase: ReplayDebuggingPhase, default_tools: list[ChatCompletionToolParam]
+    replay_phase: ReplayPhase, default_tools: list[ChatCompletionToolParam]
 ) -> list[ChatCompletionToolParam]:
     analysis_tools = [
         ReplayInspectDataTool,
         ReplayInspectPointTool,
     ]
-    if replay_phase == ReplayDebuggingPhase.Analysis:
+    if replay_phase == ReplayPhase.Analysis:
         # Analysis tools only. This phase is concluded upon submit-hypothesis.
         tools = analysis_tools + [ReplaySubmitHypothesisTool]
-    elif replay_phase == ReplayDebuggingPhase.Edit:
+    elif replay_phase == ReplayPhase.Edit:
         # Combine default and analysis tools.
         tools = default_tools + analysis_tools
     else:
-        raise ValueError(f'Unhandled ReplayDebuggingPhase in get_tools: {replay_phase}')
+        raise ValueError(f'Unhandled ReplayPhase in get_tools: {replay_phase}')
     return tools
