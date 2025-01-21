@@ -49,11 +49,11 @@ from openhands.events.observation import (
 )
 from openhands.events.observation.replay import (
     ReplayInternalCmdOutputObservation,
-    ReplayPhaseUpdateObservation,
+    ReplayObservation,
 )
-from openhands.events.replay import handle_replay_internal_observation
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
+from openhands.replay.replay_state_machine import on_replay_observation
 from openhands.utils.shutdown_listener import should_continue
 
 # note: RESUME is only available on web GUI
@@ -297,28 +297,8 @@ class AgentController:
 
         if self._pending_action and self._pending_action.id == observation.cause:
             self._pending_action = None
-            if isinstance(observation, ReplayInternalCmdOutputObservation):
-                # NOTE: Currently, the only internal command is the initial-analysis command.
-                analysis_tool_metadata = handle_replay_internal_observation(
-                    self.state, observation
-                )
-                if analysis_tool_metadata:
-                    # Start analysis phase
-                    self.state.replay_recording_id = analysis_tool_metadata[
-                        'recordingId'
-                    ]
-                    self.state.replay_phase = ReplayDebuggingPhase.Analysis
-                    self.agent.replay_phase_changed(ReplayDebuggingPhase.Analysis)
-            elif isinstance(observation, ReplayPhaseUpdateObservation):
-                new_phase = observation.new_phase
-                if self.state.replay_phase == new_phase:
-                    self.log(
-                        'warning',
-                        f'Unexpected ReplayPhaseUpdateAction. Already in phase. Observation:\n {repr(observation)}',
-                    )
-                else:
-                    self.state.replay_phase = new_phase
-                    self.agent.replay_phase_changed(new_phase)
+            if isinstance(observation, ReplayObservation):
+                on_replay_observation(observation, self.state, self.agent)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:
                 await self.set_agent_state_to(AgentState.RUNNING)

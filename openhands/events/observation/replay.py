@@ -1,3 +1,4 @@
+from abc import ABC
 from dataclasses import dataclass
 
 from openhands.core.schema import ObservationType
@@ -6,7 +7,12 @@ from openhands.events.observation.observation import Observation
 
 
 @dataclass
-class ReplayCmdOutputObservationBase(Observation):
+class ReplayObservation(Observation, ABC):
+    pass
+
+
+@dataclass
+class ReplayCmdOutputObservationBase(ReplayObservation, ABC):
     """This data class represents the output of a replay command."""
 
     command_id: int
@@ -38,7 +44,7 @@ class ReplayToolCmdOutputObservation(ReplayCmdOutputObservationBase):
 
 
 @dataclass
-class ReplayPhaseUpdateObservation(Observation):
+class ReplayPhaseUpdateObservation(ReplayObservation):
     new_phase: ReplayDebuggingPhase
     observation: str = ObservationType.REPLAY_UPDATE_PHASE
 

@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 
 from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
@@ -8,6 +8,8 @@ from openhands.events.action.action import Action
 from openhands.events.action.message import MessageAction
 from openhands.events.action.replay import ReplayInternalCmdRunAction
 from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
+from openhands.replay.replay_prompts import replay_prompt_phase_analysis
+from openhands.replay.replay_types import AnalysisToolMetadata, AnnotateResult
 
 
 def scan_recording_id(issue: str) -> str | None:
@@ -24,7 +26,7 @@ def scan_recording_id(issue: str) -> str | None:
 
 
 # Produce the command string for the `annotate-execution-points` command.
-def command_annotate_execution_points(
+def start_initial_analysis(
     thought: str, is_workspace_repo: bool
 ) -> ReplayInternalCmdRunAction:
     command_input: dict[str, Any] = dict()
@@ -57,28 +59,10 @@ def replay_enhance_action(state: State, is_workspace_repo: bool) -> Action | Non
                 )
                 state.extra_data['replay_enhance_prompt_id'] = latest_user_message.id
                 logger.info('[REPLAY] stored latest_user_message id in state')
-                return command_annotate_execution_points(
+                return start_initial_analysis(
                     latest_user_message.content, is_workspace_repo
                 )
     return None
-
-
-class AnnotatedLocation(TypedDict, total=False):
-    filePath: str
-    line: int
-
-
-class AnalysisToolMetadata(TypedDict, total=False):
-    recordingId: str
-
-
-class AnnotateResult(TypedDict, total=False):
-    point: str
-    commentText: str | None
-    annotatedRepo: str | None
-    annotatedLocations: list[AnnotatedLocation] | None
-    pointLocation: str | None
-    metadata: AnalysisToolMetadata | None
 
 
 def safe_parse_json(text: str) -> dict[str, Any] | None:
@@ -97,15 +81,7 @@ def split_metadata(result):
     return metadata, data
 
 
-def enhance_prompt(user_message: MessageAction, prefix: str, suffix: str | None = None):
-    if prefix != '':
-        user_message.content = f'{prefix}\n\n{user_message.content}'
-    if suffix is not None:
-        user_message.content = f'{user_message.content}\n\n{suffix}'
-    logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
-
-
-def handle_replay_internal_observation(
+def handle_replay_internal_command_observation(
     state: State, observation: ReplayInternalCmdOutputObservation
 ) -> AnalysisToolMetadata | None:
     """
@@ -126,63 +102,20 @@ def handle_replay_internal_observation(
         assert user_message
         state.extra_data['replay_enhance_observed'] = True
 
+        # Deserialize stringified result.
         result: AnnotateResult = cast(
             AnnotateResult, safe_parse_json(observation.content)
         )
 
-        # Determine what initial-analysis did:
+        # Get metadata and enhance prompt.
         if result and 'metadata' in result:
-            # New workflow: initial-analysis provided the metadata to allow tool use.
-            metadata, data = split_metadata(result)
-            prefix = ''
-            suffix = """
-# Instructions
-0. Take a look at below `Initial Analysis`, based on a recorded trace of the bug. Pay special attention to `IMPORTANT_NOTES`.
-1. State the main problem statement. It MUST address `IMPORTANT_NOTES`. It must make sure that the application won't crash. It must fix the issue.
-2. Propose a plan to fix or investigate with multiple options in order of priority.
-3. Then use the `inspect-*` tools to investigate.
-4. Once found, `submit-hypothesis`.
-
-
-# Initial Analysis
-""" + json.dumps(data, indent=2)
-            enhance_prompt(
-                user_message,
-                prefix,
-                suffix,
-            )
+            # initial-analysis provides metadata needed for tool use.
+            metadata, command_result = split_metadata(result)
+            replay_prompt_phase_analysis(command_result, user_message)
             return metadata
-        elif result and result.get('annotatedRepo'):
-            # Old workflow: initial-analysis left hints in form of source code annotations.
-            annotated_repo_path = result.get('annotatedRepo', '')
-            comment_text = result.get('commentText', '')
-            react_component_name = result.get('reactComponentName', '')
-            console_error = result.get('consoleError', '')
-            # start_location = result.get('startLocation', '')
-            start_name = result.get('startName', '')
-
-            # TODO: Move this to a prompt template file.
-            if comment_text:
-                if react_component_name:
-                    prefix = f'There is a change needed to the {react_component_name} component.\n'
-                else:
-                    prefix = f'There is a change needed in {annotated_repo_path}:\n'
-                prefix += f'{comment_text}\n\n'
-            elif console_error:
-                prefix = f'There is a change needed in {annotated_repo_path} to fix a console error that has appeared unexpectedly:\n'
-                prefix += f'{console_error}\n\n'
-
-            prefix += '<IMPORTANT>\n'
-            prefix += 'Information about a reproduction of the problem is available in source comments.\n'
-            prefix += 'You must search for these comments and use them to get a better understanding of the problem.\n'
-            prefix += f'The first reproduction comment to search for is named {start_name}. Start your investigation there.\n'
-            prefix += '</IMPORTANT>\n'
-
-            enhance_prompt(user_message, prefix)
-            return None
         else:
             logger.warning(
-                f'[REPLAY] Replay observation cannot be interpreted. Observed content: {str(observation.content)}'
+                f'[REPLAY] Replay command result cannot be interpreted. Observed content: {str(observation.content)}'
             )
 
     return None
