@@ -1,6 +1,7 @@
 """Define tools to interact with Replay recordings and the Replay agentic workflow."""
 
 import json
+from enum import Enum
 
 from litellm import (
     ChatCompletionMessageToolCall,
@@ -19,15 +20,24 @@ from openhands.events.action.replay import (
 from openhands.replay.replay_phases import get_replay_child_phase
 
 
+class ReplayToolType(Enum):
+    Analysis = ('analysis',)
+    PhaseTransition = 'phase_transition'
+
+
 class ReplayTool(ChatCompletionToolParam):
-    pass
+    replay_tool_type: ReplayToolType
+
+
+class ReplayAnalysisTool(ReplayTool):
+    replay_tool_type = ReplayToolType.Analysis
 
 
 def replay_tool(name: str, description: str, parameters: dict) -> ReplayTool:
     f = ChatCompletionToolParamFunctionChunk(
         name=name, description=description, parameters=parameters
     )
-    return ReplayTool(type='function', function=f)
+    return ReplayAnalysisTool(type='function', function=f)
 
 
 # ###########################################################################
@@ -90,14 +100,15 @@ ReplayInspectPointTool = replay_tool(
 # ###########################################################################
 
 
-class ReplaySubmitTool(ReplayTool):
+class ReplayPhaseTransitionTool(ReplayTool):
+    replay_tool_type = ReplayToolType.PhaseTransition
     new_phase: ReplayPhase
 
 
-def replay_submit_tool(
+def replay_phase_tool(
     new_phase: ReplayPhase, name: str, description: str, parameters: dict
 ):
-    return ReplaySubmitTool(
+    return ReplayPhaseTransitionTool(
         new_phase=new_phase,
         type='function',
         function=ChatCompletionToolParamFunctionChunk(
@@ -106,8 +117,8 @@ def replay_submit_tool(
     )
 
 
-replay_phase_transition_tools: list[ReplaySubmitTool] = [
-    replay_submit_tool(
+replay_phase_transition_tools: list[ReplayPhaseTransitionTool] = [
+    replay_phase_tool(
         ReplayPhase.Edit,
         'submit',
         """Conclude your analysis.""",
@@ -143,10 +154,19 @@ replay_tools: list[ReplayTool] = [
     *replay_phase_transition_tools,
 ]
 replay_tool_names: set[str] = set([t['function']['name'] for t in replay_tools])
+replay_replay_tool_type_by_name = {
+    t['function']['name']: t['function'].get('replay_tool_type', None)
+    for t in replay_tools
+}
 
 
-def is_replay_tool(tool_name: str) -> bool:
-    return tool_name in replay_tool_names
+def is_replay_tool(
+    tool_name: str, replay_tool_type: ReplayToolType | None = None
+) -> bool:
+    own_tool_type = replay_replay_tool_type_by_name.get(tool_name, None)
+    if not own_tool_type:
+        return False
+    return replay_tool_type is None or own_tool_type == replay_tool_type
 
 
 # ###########################################################################
@@ -196,27 +216,26 @@ def handle_replay_tool_call(
         f'[REPLAY] TOOL_CALL {tool_call.function.name} - arguments: {json.dumps(arguments, indent=2)}'
     )
     action: ReplayAction
-    if tool_call.function.name == 'inspect-data':
-        # Remove explanation arguments. Those are only used for self-consistency.
-        arguments = {k: v for k, v in arguments.items() if 'explanation' not in k}
-        action = ReplayToolCmdRunAction(
-            command_name='inspect-data',
-            command_args=arguments | {'recordingId': state.replay_recording_id},
-        )
-    elif tool_call.function.name == 'inspect-point':
-        # if arguments['expression'] == 'wiredRules':   # hackfix for 10608 experiment
-        #     raise FunctionCallValidationError(f'wiredRules is irrelevant to the problem. Try something else.')
-        action = ReplayToolCmdRunAction(
-            command_name='inspect-point',
-            command_args=arguments | {'recordingId': state.replay_recording_id},
-        )
-    elif isinstance(tool_call, ReplaySubmitTool):
+    name = tool_call.function.name
+    if is_replay_tool(name, ReplayToolType.Analysis):
+        if name == 'inspect-data':
+            # Remove explanation arguments. Those are only used for self-consistency.
+            arguments = {k: v for k, v in arguments.items() if 'explanation' not in k}
+            action = ReplayToolCmdRunAction(
+                command_name='inspect-data',
+                command_args=arguments | {'recordingId': state.replay_recording_id},
+            )
+        elif name == 'inspect-point':
+            # if arguments['expression'] == 'wiredRules':   # hackfix for 10608 experiment
+            #     raise FunctionCallValidationError(f'wiredRules is irrelevant to the problem. Try something else.')
+            action = ReplayToolCmdRunAction(
+                command_name='inspect-point',
+                command_args=arguments | {'recordingId': state.replay_recording_id},
+            )
+    elif is_replay_tool(name, ReplayToolType.PhaseTransition):
         # Request a phase change.
         action = ReplayPhaseUpdateAction(
             new_phase=tool_call['new_phase'], info=json.dumps(arguments)
         )
-    else:
-        raise ValueError(
-            f'Unknown Replay tool. Make sure to add them all to REPLAY_TOOLS: {tool_call.function.name}'
-        )
+    assert action, f'Unhandled Replay tool_call: {tool_call.function.name}'
     return action
