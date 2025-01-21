@@ -169,10 +169,16 @@ def get_replay_tools(
     else:
         raise ValueError(f'Unhandled ReplayPhase in get_tools: {replay_phase}')
 
-    # Add phase transition tools.
+    # Add tools to allow transitioning to next phase.
     next_phase = get_replay_child_phase(replay_phase)
     if next_phase:
-        tools += [t for t in replay_phase_transition_tools if t.new_phase == next_phase]
+        transition_tools = [
+            t for t in replay_phase_transition_tools if t['new_phase'] == next_phase
+        ]
+        assert len(
+            transition_tools
+        ), f'replay_phase_transition_tools is missing tools for new_phase: {next_phase}'
+        tools += transition_tools
 
     # Return all tools.
     return tools
@@ -207,7 +213,7 @@ def handle_replay_tool_call(
     elif isinstance(tool_call, ReplaySubmitTool):
         # Request a phase change.
         action = ReplayPhaseUpdateAction(
-            new_phase=tool_call.new_phase, info=json.dumps(arguments)
+            new_phase=tool_call['new_phase'], info=json.dumps(arguments)
         )
     else:
         raise ValueError(
