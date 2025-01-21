@@ -10,7 +10,9 @@ from openhands.events.observation.replay import (
     ReplayToolCmdOutputObservation,
 )
 from openhands.events.serialization.event import truncate_content
-from openhands.replay.replay_commands import handle_replay_internal_command_observation
+from openhands.replay.replay_initial_analysis import (
+    on_replay_internal_command_observation,
+)
 from openhands.replay.replay_prompts import replay_prompt_phase_edit
 
 
@@ -18,7 +20,7 @@ def on_replay_observation(obs: ReplayObservation, state: State, agent: Agent) ->
     """Handle the observation."""
     if isinstance(obs, ReplayInternalCmdOutputObservation):
         # NOTE: Currently, the only internal command is the initial-analysis command.
-        analysis_tool_metadata = handle_replay_internal_command_observation(state, obs)
+        analysis_tool_metadata = on_replay_internal_command_observation(state, obs)
         if analysis_tool_metadata:
             # Start analysis phase
             state.replay_recording_id = analysis_tool_metadata['recordingId']
@@ -52,10 +54,10 @@ def get_replay_observation_message(
     elif isinstance(obs, ReplayPhaseUpdateObservation):
         new_phase = obs.new_phase
         if new_phase == ReplayDebuggingPhase.Edit:
-            text = replay_prompt_phase_edit()
-            message = Message(role='user', content=[TextContent(text=text)])
+            text = replay_prompt_phase_edit(obs)
         else:
             raise NotImplementedError(f'Unhandled ReplayPhaseUpdateAction: {new_phase}')
+        message = Message(role='user', content=[TextContent(text=text)])
     else:
         raise NotImplementedError(
             f"Unhandled observation type: {obs.__class__.__name__} ({getattr(obs, 'observation', None)})"

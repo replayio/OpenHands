@@ -1,19 +1,19 @@
 import json
 
 from openhands.core.logger import openhands_logger as logger
-from openhands.events.action.message import MessageAction
-from openhands.replay.replay_types import AnnotateResult
+from openhands.events.observation.replay import ReplayPhaseUpdateObservation
 
 
-def enhance_prompt(user_message: MessageAction, prefix: str, suffix: str):
+def enhance_prompt(prompt: str, prefix: str, suffix: str):
     if prefix != '':
-        user_message.content = f'{prefix}\n\n{user_message.content}'
+        prompt = f'{prefix}\n\n{prompt}'
     if suffix != '':
-        user_message.content = f'{user_message.content}\n\n{suffix}'
-    logger.info(f'[REPLAY] Enhanced user prompt:\n{user_message.content}')
+        prompt = f'{prompt}\n\n{suffix}'
+    logger.info(f'[REPLAY] Enhanced prompt:\n{prompt}')
+    return prompt
 
 
-def replay_prompt_phase_analysis(command_result: dict, user_message: MessageAction):
+def replay_prompt_phase_analysis(command_result: dict, prompt: str) -> str:
     prefix = ''
     suffix = """
 # Instructions
@@ -26,12 +26,10 @@ def replay_prompt_phase_analysis(command_result: dict, user_message: MessageActi
 
 # Initial Analysis
 """ + json.dumps(command_result, indent=2)
-    return enhance_prompt(user_message, prefix, suffix)
+    return enhance_prompt(prompt, prefix, suffix)
 
 
-def replay_prompt_phase_analysis_legacy(
-    command_result: AnnotateResult, user_message: MessageAction
-):
+def replay_prompt_phase_analysis_legacy(command_result: dict, prompt: str) -> str:
     # Old workflow: initial-analysis left hints in form of source code annotations.
     annotated_repo_path = command_result.get('annotatedRepo', '')
     comment_text = command_result.get('commentText', '')
@@ -61,10 +59,10 @@ def replay_prompt_phase_analysis_legacy(
 
     suffix = ''
 
-    return enhance_prompt(user_message, prefix, suffix)
+    return enhance_prompt(prompt, prefix, suffix)
 
 
-def replay_prompt_phase_edit():
+def replay_prompt_phase_edit(obs: ReplayPhaseUpdateObservation) -> str:
     # Tell the agent to stop analyzing and start editing:
     return """
 You have concluded the analysis.

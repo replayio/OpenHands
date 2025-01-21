@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, cast
+from typing import Any, Tuple, cast
 
 from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
@@ -9,7 +9,7 @@ from openhands.events.action.message import MessageAction
 from openhands.events.action.replay import ReplayInternalCmdRunAction
 from openhands.events.observation.replay import ReplayInternalCmdOutputObservation
 from openhands.replay.replay_prompts import replay_prompt_phase_analysis
-from openhands.replay.replay_types import AnalysisToolMetadata, AnnotateResult
+from openhands.replay.replay_types import AnalysisToolMetadata
 
 
 def scan_recording_id(issue: str) -> str | None:
@@ -72,20 +72,23 @@ def safe_parse_json(text: str) -> dict[str, Any] | None:
         return None
 
 
-def split_metadata(result):
+def split_metadata(result: dict) -> Tuple[AnalysisToolMetadata, dict]:
     if 'metadata' not in result:
         return {}, result
-    metadata = result['metadata']
+    metadata = cast(AnalysisToolMetadata, result['metadata'])
     data = dict(result)
     del data['metadata']
     return metadata, data
 
 
-def handle_replay_internal_command_observation(
+def on_replay_internal_command_observation(
     state: State, observation: ReplayInternalCmdOutputObservation
 ) -> AnalysisToolMetadata | None:
     """
-    Enhance the user prompt with the results of the replay analysis.
+    Handle result for an internally sent command (not agent tool use or user action).
+
+    NOTE: Currently, the only internal command is the initial-analysis command.
+    Enhance the user prompt with the results of the initial analysis.
     Returns the metadata needed for the agent to switch to analysis tools.
     """
     enhance_action_id = state.extra_data.get('replay_enhance_prompt_id')
@@ -103,19 +106,19 @@ def handle_replay_internal_command_observation(
         state.extra_data['replay_enhance_observed'] = True
 
         # Deserialize stringified result.
-        result: AnnotateResult = cast(
-            AnnotateResult, safe_parse_json(observation.content)
-        )
+        result = safe_parse_json(observation.content)
 
         # Get metadata and enhance prompt.
         if result and 'metadata' in result:
             # initial-analysis provides metadata needed for tool use.
             metadata, command_result = split_metadata(result)
-            replay_prompt_phase_analysis(command_result, user_message)
+            user_message.content = replay_prompt_phase_analysis(
+                command_result, user_message.content
+            )
             return metadata
         else:
             logger.warning(
-                f'[REPLAY] Replay command result cannot be interpreted. Observed content: {str(observation.content)}'
+                f'[REPLAY] Replay command result missing metadata. Observed content: {str(observation.content)}'
             )
 
     return None

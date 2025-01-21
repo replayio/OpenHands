@@ -40,7 +40,7 @@ from openhands.events.observation.replay import (
 )
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
-from openhands.replay.replay_commands import replay_enhance_action
+from openhands.replay.replay_initial_analysis import replay_enhance_action
 from openhands.replay.replay_state_machine import (
     get_replay_observation_message,
 )
@@ -327,7 +327,7 @@ class CodeActAgent(Agent):
             codeact_enable_jupyter=self.config.codeact_enable_jupyter,
             codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
             codeact_enable_replay=self.config.codeact_enable_replay,
-            codeact_replay_phase=phase,
+            replay_phase=phase,
         )
         logger.debug(
             f'[REPLAY] CodeActAgent.replay_phase_changed({phase}).'

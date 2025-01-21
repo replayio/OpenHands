@@ -11,9 +11,14 @@ from openhands.events.action.action import (
 )
 
 
+@dataclass
+class ReplayAction(Action):
+    pass
+
+
 # NOTE: We need the same class twice because a lot of the agent logic is based on isinstance checks.
 @dataclass
-class ReplayCmdRunActionBase(Action):
+class ReplayCmdRunActionBase(ReplayAction):
     # Name of the command in @replayapi/cli.
     command_name: str
 
@@ -62,7 +67,7 @@ class ReplayToolCmdRunAction(ReplayCmdRunActionBase):
 
 
 @dataclass
-class ReplayPhaseUpdateAction(Action):
+class ReplayPhaseUpdateAction(ReplayAction):
     new_phase: ReplayDebuggingPhase
 
     thought: str = ''
