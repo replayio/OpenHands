@@ -43,7 +43,7 @@ from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
 from openhands.replay.replay_initial_analysis import replay_enhance_action
 from openhands.replay.replay_phases import (
-    on_agent_replay_observation,
+    get_replay_observation_prompt,
 )
 from openhands.runtime.plugins import (
     AgentSkillsRequirement,
@@ -257,7 +257,7 @@ class CodeActAgent(Agent):
             text += f'\n[Command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
         elif isinstance(obs, ReplayObservation):
-            message = on_agent_replay_observation(obs, max_message_chars)
+            message = get_replay_observation_prompt(obs, max_message_chars)
         elif isinstance(obs, IPythonRunCellObservation):
             text = obs.content
             # replace base64 images with a placeholder
@@ -326,7 +326,7 @@ class CodeActAgent(Agent):
             replay_phase=phase,
         )
         logger.info(
-            f'[REPLAY] update_tools: {json.dumps([t.function['name'] for t in self.tools], indent=2)}'
+            f'[REPLAY] update_tools: {json.dumps([t["function"]['name'] for t in self.tools], indent=2)}'
         )
 
     def step(self, state: State) -> Action:

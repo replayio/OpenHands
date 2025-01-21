@@ -1,6 +1,8 @@
 import json
+from typing import Callable, TypedDict, Union
 
 from openhands.core.logger import openhands_logger as logger
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.observation.replay import ReplayPhaseUpdateObservation
 
 
@@ -21,16 +23,20 @@ def replay_prompt_phase_analysis(command_result: dict, prompt: str) -> str:
 1. State the main problem statement. It MUST address `IMPORTANT_NOTES`. It must make sure that the application won't crash. It must fix the issue.
 2. Propose a plan to fix or investigate with multiple options in order of priority.
 3. Then use the `inspect-*` tools to investigate.
-4. Once found, `submit-hypothesis`.
+4. Once found, `submit`.
 
 # Initial Analysis
 """ + json.dumps(command_result, indent=2)
     return enhance_prompt(prompt, prefix, suffix)
 
 
-def replay_prompt_phase_edit(obs: ReplayPhaseUpdateObservation) -> str:
-    # Tell the agent to stop analyzing and start editing:
-    return """
+class PromptMap(TypedDict):
+    enter: Union[str, Callable[[ReplayPhaseUpdateObservation], str]]
+
+
+phase_prompts: dict[ReplayPhase, PromptMap] = {
+    ReplayPhase.Edit: {
+        'enter': """
 You have concluded the analysis.
 
 IMPORTANT: NOW review, then implement the hypothesized changes using tools. The code is available in the workspace. Start by answering these questions:
@@ -39,6 +45,18 @@ IMPORTANT: NOW review, then implement the hypothesized changes using tools. The 
   3. Do the `editSuggestions` actually address the issue?
   4. Rephrase the hypothesis so that it is consistent and correct.
 """
+    }
+}
+
+
+def get_phase_enter_prompt(obs: ReplayPhaseUpdateObservation) -> str:
+    """The prompt to be shown to the agent when entering a new phase."""
+    prompts = phase_prompts[obs.new_phase]
+    if not prompts:
+        raise ValueError(f'[REPLAY] No prompt for entering phase: {obs.new_phase}')
+    p = prompts['enter']
+    prompt = p(obs) if callable(p) else p
+    return prompt.strip()
 
 
 # def replay_prompt_phase_analysis_legacy(command_result: dict, prompt: str) -> str:
