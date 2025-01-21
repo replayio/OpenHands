@@ -474,7 +474,7 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
             if tool_call.function.name == 'execute_bash':
                 action = CmdRunAction(**arguments)
             elif is_replay_tool(tool_call.function.name):
-                handle_replay_tool_call(tool_call, arguments, state)
+                action = handle_replay_tool_call(tool_call, arguments, state)
             elif tool_call.function.name == 'execute_ipython_cell':
                 action = IPythonRunCellAction(**arguments)
             elif tool_call.function.name == 'delegate_to_browsing_agent':
@@ -500,6 +500,7 @@ def response_to_actions(response: ModelResponse, state: State) -> list[Action]:
                 raise FunctionCallNotExistsError(
                     f'Tool {tool_call.function.name} is not registered. (arguments: {arguments}). Please check the tool name and retry with an existing tool.'
                 )
+            assert action
 
             # We only add thought to the first action
             if i == 0:
