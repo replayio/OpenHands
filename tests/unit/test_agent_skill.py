@@ -757,10 +757,10 @@ def test_file_editor_view(tmp_path):
         result.strip().split('\n')
         == f"""Here's the files and directories up to 2 levels deep in {tmp_path}, excluding hidden items:
 {tmp_path}
-{tmp_path}/dir_2
-{tmp_path}/dir_2/b.txt
 {tmp_path}/dir_1
 {tmp_path}/dir_1/a.txt
+{tmp_path}/dir_2
+{tmp_path}/dir_2/b.txt
 """.strip().split('\n')
     )
 
