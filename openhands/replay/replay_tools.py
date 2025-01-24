@@ -152,15 +152,15 @@ replay_phase_transition_tools: list[ReplayPhaseTransitionTool] = [
 # Bookkeeping + utilities.
 # ###########################################################################
 
-replay_analysis_tools: list[ReplayTool] = [
+replay_analysis_tools: tuple[ReplayTool, ...] = (
     ReplayInspectDataTool,
     ReplayInspectPointTool,
-]
+)
 
-replay_tools: list[ReplayTool] = [
+replay_tools: tuple[ReplayTool, ...] = (
     *replay_analysis_tools,
     *replay_phase_transition_tools,
-]
+)
 replay_tool_names: set[str] = set([t['function']['name'] for t in replay_tools])
 replay_replay_tool_type_by_name = {
     t['function']['name']: t.get('replay_tool_type', None) for t in replay_tools
@@ -203,23 +203,18 @@ def get_replay_tools(
     replay_phase: ReplayPhase, default_tools: list[ChatCompletionToolParam]
 ) -> list[ChatCompletionToolParam]:
     if replay_phase == ReplayPhase.Normal:
-        # Use the default tools when not in a Replay-specific phase.
         tools = default_tools
     elif replay_phase == ReplayPhase.Analysis:
-        # Only allow analysis in this phase.
-        tools = replay_analysis_tools
+        tools = list(replay_analysis_tools)
     elif replay_phase == ReplayPhase.Edit:
-        # Combine default and analysis tools.
-        tools = default_tools + replay_analysis_tools
+        tools = default_tools + list(replay_analysis_tools)
     else:
         raise ValueError(f'Unhandled ReplayPhase in get_tools: {replay_phase}')
 
-    # Add tools to allow transitioning to next phase.
     next_phase_tool = get_replay_transition_tool_for_current_phase(replay_phase)
     if next_phase_tool:
         tools.append(next_phase_tool)
 
-    # Return all tools.
     return tools
 
 

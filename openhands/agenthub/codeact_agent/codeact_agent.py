@@ -326,7 +326,7 @@ class CodeActAgent(Agent):
             replay_phase=phase,
         )
         logger.info(
-            f'[REPLAY] update_tools: {json.dumps([t["function"]['name'] for t in self.tools], indent=2)}'
+            f'[REPLAY] update_tools for phase {phase}: {json.dumps([t["function"]['name'] for t in self.tools], indent=2)}'
         )
 
     def step(self, state: State) -> Action:

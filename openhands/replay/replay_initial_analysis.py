@@ -4,6 +4,7 @@ from typing import Any, Tuple, cast
 
 from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.action.action import Action
 from openhands.events.action.message import MessageAction
 from openhands.events.action.replay import ReplayInternalCmdRunAction
@@ -44,6 +45,10 @@ def start_initial_analysis(
 
 
 def replay_enhance_action(state: State, is_workspace_repo: bool) -> Action | None:
+    if state.replay_phase != ReplayPhase.Normal:
+        # We currently only enhance prompts in the Normal phase.
+        return None
+
     if state.replay_enhance_prompt_id == -1:
         # 1. Get current user prompt.
         latest_user_message = state.get_last_user_message()

@@ -88,9 +88,9 @@ def get_phase_prompt(obs) -> str:
 
 def update_phase(new_phase: ReplayPhase, state: State, agent: Agent):
     """Apply phase update side effects."""
+    logger.info(f'[REPLAY] update_phase (replay_phase): {new_phase}')
     state.replay_phase = new_phase
     agent.update_tools(new_phase)
-    logger.info(f'[REPLAY] update_phase (replay_phase): {new_phase}')
 
 
 # ###########################################################################
