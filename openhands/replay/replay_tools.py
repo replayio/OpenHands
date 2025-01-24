@@ -254,17 +254,13 @@ def handle_replay_tool_call(
     elif is_replay_tool(name, ReplayToolType.PhaseTransition):
         # Request a phase change.
         tool = get_replay_transition_tool_for_current_phase(state.replay_phase, name)
-        assert tool, f'Missing ReplayPhaseTransitionTool for {state.replay_phase} in Replay tool_call: {tool_call.function.name}'
+        assert tool, f'[REPLAY] Missing ReplayPhaseTransitionTool for {state.replay_phase} in Replay tool_call: {tool_call.function.name}'
         new_phase = tool['new_phase']
         assert (
             new_phase
-        ), f'Missing new_phase in Replay tool_call: {tool_call.function.name}'
-        assert (
-            new_phase
-        ), f'Missing new_phase in Replay tool_call: {tool_call.function.name}'
-        del arguments['new_phase']
+        ), f'[REPLAY] Missing new_phase in Replay tool_call: {tool_call.function.name}'
         action = ReplayPhaseUpdateAction(
             new_phase=new_phase, info=json.dumps(arguments)
         )
-    assert action, f'Unhandled Replay tool_call: {tool_call.function.name}'
+    assert action, f'[REPLAY] Unhandled Replay tool_call: {tool_call.function.name}'
     return action
