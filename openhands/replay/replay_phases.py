@@ -97,18 +97,21 @@ def update_phase(new_phase: ReplayPhase, state: State, agent: Agent):
 # ReplayStateMachine.
 # ###########################################################################
 
-replay_state_transitions: dict[ReplayPhase, list[ReplayPhase] | None] = {
+replay_state_transitions: dict[ReplayPhase, tuple[ReplayPhase, ...] | None] = {
     ReplayPhase.Normal: None,
-    ReplayPhase.Analysis: [ReplayPhase.Edit],
+    ReplayPhase.Analysis: (ReplayPhase.Edit,),
     ReplayPhase.Edit: None,
 }
 
 
+# This machine represents state transitions that the agent can make.
 class ReplayStateMachine:
     def __init__(self):
-        self.forward_edges = replay_state_transitions
-
-        self.reverse_edges: dict[ReplayPhase, list[ReplayPhase] | None] = {}
+        self.forward_edges: dict[ReplayPhase, list[ReplayPhase] | None] = {
+            phase: list(targets) if targets is not None else None
+            for phase, targets in replay_state_transitions.items()
+        }
+        self.reverse_edges: dict[ReplayPhase, list[ReplayPhase]] = {}
 
         for source, targets in self.forward_edges.items():
             if targets:
@@ -128,7 +131,7 @@ class ReplayStateMachine:
         if not phases:
             return None
         if len(phases) == 1:
-            return phases.pop()
+            return phases[0]
         assert len(phases) > 1
         raise ValueError(f'Phase {phase} has multiple parent phases: {phases}')
 
@@ -140,7 +143,7 @@ class ReplayStateMachine:
         if not phases:
             return None
         if len(phases) == 1:
-            return phases.pop()
+            return phases[0]
         assert len(phases) > 1
         raise ValueError(f'Phase {phase} has multiple child phases: {phases}')
 
@@ -151,5 +154,5 @@ class ReplayStateMachine:
 replay_state_machine = ReplayStateMachine()
 
 
-def get_replay_child_phase(phase: ReplayPhase) -> ReplayPhase | None:
+def get_next_agent_replay_phase(phase: ReplayPhase) -> ReplayPhase | None:
     return replay_state_machine.get_unique_child_phase(phase)

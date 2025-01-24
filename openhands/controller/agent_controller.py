@@ -53,7 +53,6 @@ from openhands.events.observation.replay import (
 )
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
-from openhands.replay.replay_phases import on_controller_replay_observation
 from openhands.utils.shutdown_listener import should_continue
 
 # note: RESUME is only available on web GUI
@@ -296,6 +295,10 @@ class AgentController:
         if self._pending_action and self._pending_action.id == observation.cause:
             self._pending_action = None
             if isinstance(observation, ReplayObservation):
+                from openhands.replay.replay_phases import (
+                    on_controller_replay_observation,
+                )
+
                 on_controller_replay_observation(observation, self.state, self.agent)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:

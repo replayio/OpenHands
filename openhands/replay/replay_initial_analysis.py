@@ -44,8 +44,7 @@ def start_initial_analysis(
 
 
 def replay_enhance_action(state: State, is_workspace_repo: bool) -> Action | None:
-    enhance_action_id = state.extra_data.get('replay_enhance_prompt_id')
-    if enhance_action_id is None:
+    if state.replay_enhance_prompt_id == -1:
         # 1. Get current user prompt.
         latest_user_message = state.get_last_user_message()
         if latest_user_message:
@@ -57,7 +56,7 @@ def replay_enhance_action(state: State, is_workspace_repo: bool) -> Action | Non
                 logger.debug(
                     f'[REPLAY] Enhancing prompt for Replay recording "{recording_id}"...'
                 )
-                state.extra_data['replay_enhance_prompt_id'] = latest_user_message.id
+                state.replay_enhance_prompt_id = latest_user_message.id
                 logger.info('[REPLAY] stored latest_user_message id in state')
                 return start_initial_analysis(
                     latest_user_message.content, is_workspace_repo
@@ -89,19 +88,18 @@ def on_replay_internal_command_observation(
     Enhance the user prompt with the results of the initial analysis.
     Returns the metadata needed for the agent to switch to analysis tools.
     """
-    enhance_action_id = state.extra_data.get('replay_enhance_prompt_id')
-    enhance_observed = state.extra_data.get('replay_enhance_observed', False)
-    if enhance_action_id is not None and not enhance_observed:
+    if state.replay_enhance_prompt_id != -1 and not state.replay_enhanced:
         user_message: MessageAction | None = next(
             (
                 m
                 for m in state.history
-                if m.id == enhance_action_id and isinstance(m, MessageAction)
+                if m.id == state.replay_enhance_prompt_id
+                and isinstance(m, MessageAction)
             ),
             None,
         )
         assert user_message
-        state.extra_data['replay_enhance_observed'] = True
+        state.replay_enhanced = True
 
         # Deserialize stringified result.
         result = safe_parse_json(observation.content)

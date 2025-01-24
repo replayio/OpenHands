@@ -17,7 +17,7 @@ from openhands.events.action.replay import (
     ReplayPhaseUpdateAction,
     ReplayToolCmdRunAction,
 )
-from openhands.replay.replay_phases import get_replay_child_phase
+from openhands.replay.replay_phases import get_next_agent_replay_phase
 
 
 class ReplayToolType(Enum):
@@ -184,7 +184,7 @@ def is_replay_tool(
 def get_replay_transition_tool_for_current_phase(
     current_phase: ReplayPhase, name: str | None = None
 ) -> ReplayTool | None:
-    next_phase = get_replay_child_phase(current_phase)
+    next_phase = get_next_agent_replay_phase(current_phase)
     if next_phase:
         transition_tools = [
             t

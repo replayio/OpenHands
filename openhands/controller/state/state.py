@@ -101,6 +101,8 @@ class State:
     extra_data: dict[str, Any] = field(default_factory=dict)
     last_error: str = ''
 
+    replay_enhance_prompt_id: int = -1
+    replay_enhanced: bool = False
     replay_recording_id: str = ''
     replay_phase: ReplayPhase = ReplayPhase.Normal
 
