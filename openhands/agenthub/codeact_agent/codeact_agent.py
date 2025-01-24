@@ -369,7 +369,10 @@ class CodeActAgent(Agent):
         params['tools'] = self.tools
         if self.mock_function_calling:
             params['mock_function_calling'] = True
-        # logger.debug(f'#######\nCodeActAgent.step: messages:\n{json.dumps(params)}\n\n#######\n')
+
+        # # Debug log the raw input to the LLM:
+        # logger.debug(f'#######\nCodeActAgent.step: RAW LLM INPUT:\n{repr(params)}\n\n#######\n')
+
         response = self.llm.completion(**params)
         actions = codeact_function_calling.response_to_actions(response, state)
         for action in actions:

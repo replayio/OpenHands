@@ -97,21 +97,35 @@ def update_phase(new_phase: ReplayPhase, state: State, agent: Agent):
 # ReplayStateMachine.
 # ###########################################################################
 
-replay_state_transitions: dict[ReplayPhase, tuple[ReplayPhase, ...] | None] = {
-    ReplayPhase.Normal: None,
-    ReplayPhase.Analysis: (ReplayPhase.Edit,),
-    ReplayPhase.Edit: None,
+# Transition edges controlled by the agent.
+replay_agent_state_transitions: dict[ReplayPhase, tuple[ReplayPhase, ...]] = {
+    ReplayPhase.Analysis: (ReplayPhase.ConfirmAnalysis,),
+    ReplayPhase.ConfirmAnalysis: (ReplayPhase.Edit,),
 }
 
 
 # This machine represents state transitions that the agent can make.
-class ReplayStateMachine:
+class ReplayAgentStateMachine:
+    edges: list[tuple[ReplayPhase, ReplayPhase]]
+    """List of all edges."""
+
+    forward_edges: dict[ReplayPhase, list[ReplayPhase]]
+    """Adjacency list of forward edges."""
+
+    reverse_edges: dict[ReplayPhase, list[ReplayPhase]]
+    """Adjacency list of reverse edges."""
+
     def __init__(self):
-        self.forward_edges: dict[ReplayPhase, list[ReplayPhase] | None] = {
+        self.forward_edges = {
             phase: list(targets) if targets is not None else None
-            for phase, targets in replay_state_transitions.items()
+            for phase, targets in replay_agent_state_transitions.items()
         }
-        self.reverse_edges: dict[ReplayPhase, list[ReplayPhase]] = {}
+        self.edges = [
+            (source, target)
+            for source, targets in self.forward_edges.items()
+            for target in targets
+        ]
+        self.reverse_edges = {}
 
         for source, targets in self.forward_edges.items():
             if targets:
@@ -151,8 +165,8 @@ class ReplayStateMachine:
         return self.forward_edges.get(phase, list())
 
 
-replay_state_machine = ReplayStateMachine()
+replay_agent_state_machine = ReplayAgentStateMachine()
 
 
 def get_next_agent_replay_phase(phase: ReplayPhase) -> ReplayPhase | None:
-    return replay_state_machine.get_unique_child_phase(phase)
+    return replay_agent_state_machine.get_unique_child_phase(phase)

@@ -65,13 +65,11 @@ else
 fi
 
 # Config overrides + sanity checks.
-set -x
 export DEBUG=1
 # export REPLAY_DEV_MODE=1
 export REPLAY_ENABLE_TOOL_CACHE=1
 export WORKSPACE_BASE="$WORKSPACE_ROOT"
 export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
-set +x
 
 if [[ -z "$LLM_API_KEY" ]]; then
     if [[ -z "$ANTHROPIC_API_KEY" ]]; then

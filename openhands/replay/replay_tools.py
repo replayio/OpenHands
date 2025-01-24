@@ -12,17 +12,20 @@ from litellm import (
 from openhands.controller.state.state import State
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.schema.replay import ReplayPhase
+from openhands.events.action.action import Action
+from openhands.events.action.empty import NullAction
 from openhands.events.action.replay import (
-    ReplayAction,
     ReplayPhaseUpdateAction,
     ReplayToolCmdRunAction,
 )
-from openhands.replay.replay_phases import get_next_agent_replay_phase
 
 
 class ReplayToolType(Enum):
     Analysis = 'analysis'
+    """Tools that allow analyzing a Replay recording."""
+
     PhaseTransition = 'phase_transition'
+    """Tools that trigger a phase transition. Phase transitions are generally used to improve self-consistency."""
 
 
 class ReplayTool(ChatCompletionToolParam):
@@ -45,16 +48,19 @@ def replay_analysis_tool(name: str, description: str, parameters: dict) -> Repla
 
 
 class ReplayPhaseTransitionTool(ReplayTool):
+    edges: list[tuple[ReplayPhase, ReplayPhase]]
     replay_tool_type = ReplayToolType.PhaseTransition
-    new_phase: ReplayPhase
 
 
 def replay_phase_tool(
-    new_phase: ReplayPhase, name: str, description: str, parameters: dict
+    edges: list[tuple[ReplayPhase, ReplayPhase]],
+    name: str,
+    description: str,
+    parameters: dict,
 ):
     tool = ReplayPhaseTransitionTool(
+        edges=edges,
         replay_tool_type=ReplayToolType.PhaseTransition,
-        new_phase=new_phase,
         type='function',
         function=ChatCompletionToolParamFunctionChunk(
             name=name,
@@ -127,26 +133,64 @@ ReplayInspectPointTool = replay_analysis_tool(
 
 replay_phase_transition_tools: list[ReplayPhaseTransitionTool] = [
     replay_phase_tool(
-        ReplayPhase.Edit,
+        [
+            (ReplayPhase.Analysis, ReplayPhase.ConfirmAnalysis),
+        ],
         'submit',
-        """Conclude your analysis.""",
+        """Submit your analysis.""",
         {
             'type': 'object',
             'properties': {
                 'problem': {
                     'type': 'string',
-                    'description': 'One-sentence explanation of the core problem that this will solve.',
+                    'description': 'One-sentence explanation of the core problem, according to user requirements and initial-analysis.',
                 },
                 'rootCauseHypothesis': {'type': 'string'},
+                'badCode': {
+                    'type': 'string',
+                    'description': 'Show exactly which code requires changing, according to the user requirements and initial-analysis.',
+                },
+            },
+            'required': ['problem', 'rootCauseHypothesis', 'badCode'],
+        },
+    ),
+    replay_phase_tool(
+        [
+            (ReplayPhase.ConfirmAnalysis, ReplayPhase.Edit),
+        ],
+        'confirm',
+        """Confirm your analysis and suggest specific code changes.""",
+        {
+            'type': 'object',
+            'properties': {
+                'problem': {
+                    'type': 'string',
+                    'description': 'One-sentence explanation of the core problem, according to user requirements and initial-analysis.',
+                },
+                'rootCauseHypothesis': {'type': 'string'},
+                'badCode': {
+                    'type': 'string',
+                    'description': 'Show exactly which code requires changing, according to the user requirements and initial-analysis.',
+                },
                 'editSuggestions': {
                     'type': 'string',
                     'description': 'Provide suggestions to fix the bug, if you know enough about the code that requires modification.',
                 },
             },
-            'required': ['problem', 'rootCauseHypothesis'],
+            'required': ['problem', 'rootCauseHypothesis', 'editSuggestions'],
         },
-    )
+    ),
 ]
+
+replay_phase_transition_tools_by_from_phase = {
+    phase: [
+        t
+        for t in replay_phase_transition_tools
+        for edge in t['edges']
+        if edge[0] == phase
+    ]
+    for phase in {edge[0] for t in replay_phase_transition_tools for edge in t['edges']}
+}
 
 # ###########################################################################
 # Bookkeeping + utilities.
@@ -181,22 +225,25 @@ def is_replay_tool(
 # ###########################################################################
 
 
-def get_replay_transition_tool_for_current_phase(
-    current_phase: ReplayPhase, name: str | None = None
+def get_replay_transition_tools(current_phase: ReplayPhase) -> list[ReplayTool] | None:
+    phase_tools = replay_phase_transition_tools_by_from_phase.get(current_phase, None)
+    if not phase_tools:
+        return None
+    assert len(phase_tools)
+    return phase_tools
+
+
+def get_replay_transition_tool(
+    current_phase: ReplayPhase, name: str
 ) -> ReplayTool | None:
-    next_phase = get_next_agent_replay_phase(current_phase)
-    if next_phase:
-        transition_tools = [
-            t
-            for t in replay_phase_transition_tools
-            if t['new_phase'] == next_phase
-            and (not name or t['function']['name'] == name)
-        ]
-        assert len(
-            transition_tools
-        ), f'replay_phase_transition_tools is missing tools for new_phase: {next_phase}'
-        return transition_tools[0]
-    return None
+    tools = get_replay_transition_tools(current_phase)
+    if not tools:
+        return None
+    matching = [t for t in tools if t['function']['name'] == name]
+    assert (
+        len(matching) == 1
+    ), f'replay_phase_transition_tools did not get unique matching tool for phase {current_phase} and name {name}'
+    return matching[0]
 
 
 def get_replay_tools(
@@ -206,14 +253,16 @@ def get_replay_tools(
         tools = default_tools
     elif replay_phase == ReplayPhase.Analysis:
         tools = list(replay_analysis_tools)
+    elif replay_phase == ReplayPhase.ConfirmAnalysis:
+        tools = list(replay_analysis_tools)
     elif replay_phase == ReplayPhase.Edit:
         tools = default_tools + list(replay_analysis_tools)
     else:
         raise ValueError(f'Unhandled ReplayPhase in get_tools: {replay_phase}')
 
-    next_phase_tool = get_replay_transition_tool_for_current_phase(replay_phase)
-    if next_phase_tool:
-        tools.append(next_phase_tool)
+    next_phase_tools = get_replay_transition_tools(replay_phase)
+    if next_phase_tools:
+        tools += next_phase_tools
 
     return tools
 
@@ -225,11 +274,11 @@ def get_replay_tools(
 
 def handle_replay_tool_call(
     tool_call: ChatCompletionMessageToolCall, arguments: dict, state: State
-) -> ReplayAction:
+) -> Action:
     logger.info(
         f'[REPLAY] TOOL_CALL {tool_call.function.name} - arguments: {json.dumps(arguments, indent=2)}'
     )
-    action: ReplayAction
+    action: Action
     name = tool_call.function.name
     if is_replay_tool(name, ReplayToolType.Analysis):
         if name == 'inspect-data':
@@ -248,14 +297,24 @@ def handle_replay_tool_call(
             )
     elif is_replay_tool(name, ReplayToolType.PhaseTransition):
         # Request a phase change.
-        tool = get_replay_transition_tool_for_current_phase(state.replay_phase, name)
-        assert tool, f'[REPLAY] Missing ReplayPhaseTransitionTool for {state.replay_phase} in Replay tool_call: {tool_call.function.name}'
-        new_phase = tool['new_phase']
+        tool = get_replay_transition_tool(state.replay_phase, name)
+        assert tool, f'[REPLAY] Missing ReplayPhaseTransitionTool for {state.replay_phase} in Replay tool_call({tool_call.function.name})'
+        new_phase = next(
+            (
+                to_phase
+                for [from_phase, to_phase] in tool['edges']
+                if from_phase == state.replay_phase
+            ),
+            None,
+        )
         assert (
             new_phase
         ), f'[REPLAY] Missing new_phase in Replay tool_call: {tool_call.function.name}'
         action = ReplayPhaseUpdateAction(
             new_phase=new_phase, info=json.dumps(arguments)
         )
+    else:
+        # NOTE: This is a weird bug where Claude sometimes might call a tool that it *had* but does not have anymore.
+        action = NullAction()
     assert action, f'[REPLAY] Unhandled Replay tool_call: {tool_call.function.name}'
     return action

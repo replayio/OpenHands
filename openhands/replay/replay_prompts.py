@@ -35,17 +35,25 @@ class PromptMap(TypedDict):
 
 
 phase_prompts: dict[ReplayPhase, PromptMap] = {
-    ReplayPhase.Edit: {
+    ReplayPhase.ConfirmAnalysis: {
         'enter': """
-You have concluded the analysis.
+You have submitted a draft of the hypothesis.
 
-IMPORTANT: NOW review, then implement the hypothesized changes using tools. The code is available in the workspace. Start by answering these questions:
+IMPORTANT: NOW review the hypothesis. When reviewing, PAY ATTENTION to this:
   1. What is the goal of the investigation according to the initial prompt and initial analysis? IMPORTANT. PAY ATTENTION TO THIS. THIS IS THE ENTRY POINT OF EVERYTHING.
   2. Given (1), is the hypothesis's `problem` description correct? Does it match the goal of the investigation?
   3. Do the `editSuggestions` actually address the issue?
-  4. Rephrase the hypothesis so that it is consistent and correct.
+
+Rephrase and confirm a revised hypothesis.
 """
-    }
+    },
+    ReplayPhase.Edit: {
+        'enter': """
+You have confirmed the analysis.
+
+IMPORTANT: NOW implement the confirmed suggestions. The code is available in the workspace.
+"""
+    },
 }
 
 
