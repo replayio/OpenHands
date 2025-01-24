@@ -51,7 +51,7 @@ Rephrase and confirm a revised hypothesis.
         'enter': """
 You have confirmed the analysis.
 
-IMPORTANT: NOW implement the confirmed suggestions. The code is available in the workspace.
+IMPORTANT: NOW implement the confirmed suggestions. The code is available in the workspace. Don't stop until you are finished implementing the proposed fix.
 """
     },
 }
