@@ -90,10 +90,3 @@ cd $OH_ROOT
 set -x
 poetry run python -m openhands.core.main -t "$PROMPT_ONELINE" >"${LOG_FILE}" 2>&1
 set +x
-
-
-# Log the relevant diff.
-echo "Diff:"
-pushd $WORKSPACE_ROOT > /dev/null
-git --no-pager diff | grep -C 5 "map\.setView"
-popd > /dev/null
