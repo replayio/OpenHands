@@ -206,7 +206,7 @@ class ActionExecutor:
     async def replay_update_phase(self, action: ReplayPhaseUpdateAction) -> Observation:
         return ReplayPhaseUpdateObservation(
             new_phase=action.new_phase,
-            content=f'ReplayDebuggingPhase changed to {action.new_phase}',
+            content=f'ReplayPhase changed to {action.new_phase}',
         )
 
     async def run_ipython(self, action: IPythonRunCellAction) -> Observation:

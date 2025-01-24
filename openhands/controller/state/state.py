@@ -6,7 +6,7 @@ from typing import Any
 
 from openhands.controller.state.task import RootTask
 from openhands.core.logger import openhands_logger as logger
-from openhands.core.schema import AgentState, ReplayDebuggingPhase
+from openhands.core.schema import AgentState, ReplayPhase
 from openhands.events.action import (
     MessageAction,
 )
@@ -101,8 +101,10 @@ class State:
     extra_data: dict[str, Any] = field(default_factory=dict)
     last_error: str = ''
 
+    replay_enhance_prompt_id: int = -1
+    replay_enhanced: bool = False
     replay_recording_id: str = ''
-    replay_phase: ReplayDebuggingPhase = ReplayDebuggingPhase.Normal
+    replay_phase: ReplayPhase = ReplayPhase.Normal
 
     def save_to_session(self, sid: str, file_store: FileStore):
         pickled = pickle.dumps(self)

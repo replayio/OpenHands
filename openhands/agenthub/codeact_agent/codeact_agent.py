@@ -1,3 +1,4 @@
+import json
 import os
 from collections import deque
 
@@ -9,7 +10,7 @@ from openhands.controller.state.state import State
 from openhands.core.config import AgentConfig
 from openhands.core.logger import openhands_logger as logger
 from openhands.core.message import ImageContent, Message, TextContent
-from openhands.core.schema.replay import ReplayDebuggingPhase
+from openhands.core.schema.replay import ReplayPhase
 from openhands.events.action import (
     Action,
     AgentDelegateAction,
@@ -36,12 +37,14 @@ from openhands.events.observation import (
 from openhands.events.observation.error import ErrorObservation
 from openhands.events.observation.observation import Observation
 from openhands.events.observation.replay import (
-    ReplayPhaseUpdateObservation,
-    ReplayToolCmdOutputObservation,
+    ReplayObservation,
 )
-from openhands.events.replay import replay_enhance_action
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
+from openhands.replay.replay_initial_analysis import replay_enhance_action
+from openhands.replay.replay_phases import (
+    get_replay_observation_prompt,
+)
 from openhands.runtime.plugins import (
     AgentSkillsRequirement,
     JupyterRequirement,
@@ -102,7 +105,7 @@ class CodeActAgent(Agent):
 
         # We're in normal mode by default (even if replay is not enabled).
         # This will initialize the set of tools the agent has access to.
-        self.replay_phase_changed(ReplayDebuggingPhase.Normal)
+        self.update_tools(ReplayPhase.Normal)
 
         self.prompt_manager = PromptManager(
             microagent_dir=os.path.join(os.path.dirname(__file__), 'micro')
@@ -253,38 +256,8 @@ class CodeActAgent(Agent):
                 )
             text += f'\n[Command finished with exit code {obs.exit_code}]'
             message = Message(role='user', content=[TextContent(text=text)])
-        elif isinstance(obs, ReplayToolCmdOutputObservation):
-            # if it doesn't have tool call metadata, it was triggered by a user action
-            if obs.tool_call_metadata is None:
-                text = truncate_content(
-                    f'\nObserved result of replay command executed by user:\n{obs.content}',
-                    max_message_chars,
-                )
-            else:
-                text = obs.content
-            message = Message(role='user', content=[TextContent(text=text)])
-        elif isinstance(obs, ReplayPhaseUpdateObservation):
-            # NOTE: The phase change itself is handled in AgentController.
-            new_phase = obs.new_phase
-            if new_phase == ReplayDebuggingPhase.Edit:
-                # Tell the agent to stop analyzing and start editing:
-                text = """
-You have concluded the analysis.
-
-IMPORTANT: NOW review, then implement the hypothesized changes using tools. The code is available in the workspace. Start by answering these questions:
-  1. What is the goal of the investigation according to the initial prompt and initial analysis? IMPORTANT. PAY ATTENTION TO THIS. THIS IS THE ENTRY POINT OF EVERYTHING.
-  2. Given (1), is the hypothesis's `problem` description correct? Does it match the goal of the investigation?
-  3. Do the `editSuggestions` actually address the issue?
-  4. Rephrase the hypothesis so that it is consistent and correct.
-
-IMPORTANT: Don't stop. Keep working.
-IMPORTANT: Don't stop. Keep working.
-"""
-                message = Message(role='user', content=[TextContent(text=text)])
-            else:
-                raise NotImplementedError(
-                    f'Unhandled ReplayPhaseUpdateAction: {new_phase}'
-                )
+        elif isinstance(obs, ReplayObservation):
+            message = get_replay_observation_prompt(obs, max_message_chars)
         elif isinstance(obs, IPythonRunCellObservation):
             text = obs.content
             # replace base64 images with a placeholder
@@ -344,22 +317,16 @@ IMPORTANT: Don't stop. Keep working.
         """Resets the CodeAct Agent."""
         super().reset()
 
-    def replay_phase_changed(self, phase: ReplayDebuggingPhase) -> None:
-        """Called whenenever the phase of the replay debugging process changes.
-
-        We currently use this to give the agent access to different tools for the
-        different phases.
-        """
+    def update_tools(self, phase: ReplayPhase) -> None:
         self.tools = codeact_function_calling.get_tools(
             codeact_enable_browsing=self.config.codeact_enable_browsing,
             codeact_enable_jupyter=self.config.codeact_enable_jupyter,
             codeact_enable_llm_editor=self.config.codeact_enable_llm_editor,
             codeact_enable_replay=self.config.codeact_enable_replay,
-            codeact_replay_phase=phase,
+            replay_phase=phase,
         )
-        logger.debug(
-            f'[REPLAY] CodeActAgent.replay_phase_changed({phase}).'
-            # f'New tools: {json.dumps(self.tools, indent=2)}'
+        logger.info(
+            f'[REPLAY] update_tools for phase {phase}: {json.dumps([t["function"]['name'] for t in self.tools], indent=2)}'
         )
 
     def step(self, state: State) -> Action:
@@ -388,7 +355,7 @@ IMPORTANT: Don't stop. Keep working.
             return AgentFinishAction()
 
         if self.config.codeact_enable_replay:
-            # Replay enhancement.
+            # Check for whether we should enhance the prompt.
             enhance_action = replay_enhance_action(state, self.config.is_workspace_repo)
             if enhance_action:
                 logger.info('[REPLAY] Enhancing prompt for Replay recording...')
@@ -402,7 +369,10 @@ IMPORTANT: Don't stop. Keep working.
         params['tools'] = self.tools
         if self.mock_function_calling:
             params['mock_function_calling'] = True
-        # logger.debug(f'#######\nCodeActAgent.step: messages:\n{json.dumps(params)}\n\n#######\n')
+
+        # # Debug log the raw input to the LLM:
+        # logger.debug(f'#######\nCodeActAgent.step: RAW LLM INPUT:\n{repr(params)}\n\n#######\n')
+
         response = self.llm.completion(**params)
         actions = codeact_function_calling.response_to_actions(response, state)
         for action in actions:

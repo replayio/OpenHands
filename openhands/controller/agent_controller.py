@@ -20,7 +20,7 @@ from openhands.core.exceptions import (
 )
 from openhands.core.logger import LOG_ALL_EVENTS
 from openhands.core.logger import openhands_logger as logger
-from openhands.core.schema import AgentState, ReplayDebuggingPhase
+from openhands.core.schema import AgentState
 from openhands.events import EventSource, EventStream, EventStreamSubscriber
 from openhands.events.action import (
     Action,
@@ -49,9 +49,8 @@ from openhands.events.observation import (
 )
 from openhands.events.observation.replay import (
     ReplayInternalCmdOutputObservation,
-    ReplayPhaseUpdateObservation,
+    ReplayObservation,
 )
-from openhands.events.replay import handle_replay_internal_observation
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.llm import LLM
 from openhands.utils.shutdown_listener import should_continue
@@ -144,8 +143,6 @@ class AgentController:
         # stuck helper
         self._stuck_detector = StuckDetector(self.state)
         self.status_callback = status_callback
-
-        self.replay_phase = ReplayDebuggingPhase.Normal
 
     async def close(self) -> None:
         """Closes the agent controller, canceling any ongoing tasks and unsubscribing from the event stream.
@@ -297,28 +294,12 @@ class AgentController:
 
         if self._pending_action and self._pending_action.id == observation.cause:
             self._pending_action = None
-            if isinstance(observation, ReplayInternalCmdOutputObservation):
-                # NOTE: Currently, the only internal command is the initial-analysis command.
-                analysis_tool_metadata = handle_replay_internal_observation(
-                    self.state, observation
+            if isinstance(observation, ReplayObservation):
+                from openhands.replay.replay_phases import (
+                    on_controller_replay_observation,
                 )
-                if analysis_tool_metadata:
-                    # Start analysis phase
-                    self.state.replay_recording_id = analysis_tool_metadata[
-                        'recordingId'
-                    ]
-                    self.state.replay_phase = ReplayDebuggingPhase.Analysis
-                    self.agent.replay_phase_changed(ReplayDebuggingPhase.Analysis)
-            elif isinstance(observation, ReplayPhaseUpdateObservation):
-                new_phase = observation.new_phase
-                if self.state.replay_phase == new_phase:
-                    self.log(
-                        'warning',
-                        f'Unexpected ReplayPhaseUpdateAction. Already in phase. Observation:\n {repr(observation)}',
-                    )
-                else:
-                    self.state.replay_phase = new_phase
-                    self.agent.replay_phase_changed(new_phase)
+
+                on_controller_replay_observation(observation, self.state, self.agent)
 
             if self.state.agent_state == AgentState.USER_CONFIRMED:
                 await self.set_agent_state_to(AgentState.RUNNING)

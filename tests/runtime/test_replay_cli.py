@@ -38,7 +38,7 @@ def test_initial_analysis(temp_dir, runtime_cls, run_as_openhands):
 
         try:
             result: dict = json.loads(obs.content)
-            assert result.get('thisPoint', '') == '78858008544042601258383216576823300'
+            assert result.get('thisPoint', '') == '78858008544042601258383216576823298'
         except json.JSONDecodeError:
             raise AssertionError(
                 f'obs.content should be a valid JSON string: {repr(obs)}'

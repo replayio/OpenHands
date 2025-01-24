@@ -9,7 +9,7 @@ INSTANCE_ID=$1
 PROMPT_NAME="$2"
 
 THIS_DIR="$(dirname "$0")"
-OH_ROOT="$THIS_DIR/.."
+OH_ROOT="$THIS_DIR/../.."
 OH_ROOT="$(node -e 'console.log(require("path").resolve(process.argv[1]))' $OH_ROOT)"
 if [[ -z "$TMP_DIR" ]]; then
     TMP_DIR="/tmp"
@@ -70,6 +70,7 @@ export DEBUG=1
 export REPLAY_ENABLE_TOOL_CACHE=1
 export WORKSPACE_BASE="$WORKSPACE_ROOT"
 export LLM_MODEL="anthropic/claude-3-5-sonnet-20241022"
+
 if [[ -z "$LLM_API_KEY" ]]; then
     if [[ -z "$ANTHROPIC_API_KEY" ]]; then
         echo "LLM_API_KEY or ANTHROPIC_API_KEY environment variable must be set."
@@ -84,9 +85,11 @@ echo "WORKSPACE_ROOT: \"$WORKSPACE_ROOT\""
 echo "Logging to \"$LOG_FILE\"..."
 
 # GO.
+PROMPT_ONELINE=$(echo "$PROMPT" | tr '\n' " ")
 cd $OH_ROOT
-poetry run python -m openhands.core.main -t "$PROMPT" \
-    > "$LOG_FILE" 2>&1
+set -x
+poetry run python -m openhands.core.main -t "$PROMPT_ONELINE" >"${LOG_FILE}" 2>&1
+set +x
 
 
 # Log the relevant diff.
