@@ -20,7 +20,7 @@ OH_ROOT="$(node -e 'console.log(require("path").resolve(process.argv[1]))' $OH_R
 if [[ -z "$TMP_DIR" ]]; then
     TMP_DIR="/tmp"
 fi
-TARGET_FOLDER="$TMP_DIR/bolt/$INSTANCE_ID"
+TARGET_FOLDER="$TMP_DIR/nut/$INSTANCE_ID"
 WORKSPACE_ROOT="$TARGET_FOLDER/workspace"
 INSTANCE_DIR="$THIS_DIR/$INSTANCE_ID"
 
